@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "GraphDatabaseTryout": {
+      "commandName": "Project",
+      "commandLineArgs": "migrate",
+      "environmentVariables": {
+        "ConnectionString:Graph": "Server=127.0.0.1;Database=main;User Id=sa;Password=test-1234;Database=test_graph"
+      }
+    }
+  }
+}

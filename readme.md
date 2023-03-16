@@ -11,3 +11,5 @@ Time has come. Let's check it out: look into query complexity and performance. F
 | ![graph_schemawsd](https://www.plantuml.com/plantuml/svg/ROyn2iCm34LtdS8No0Kwb6oT2jrBCMhzunWI6MIvqDitfNQcRF_1rvCq5cErkYv45uZYv8HN45tpEtLe-GFMdXT8j7adbbWvzZ4trE7icYuLdoUY6xHaQS8E4HAWEpwJskm36th_RsfRVfSgWa_YxbmUHvMG52z381etzVRL5m00 "graph_schemawsd") | |
 
 
+## Dev notes
+* podman run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=test-1234" -p 1433:1433 -v ./mssql_data:/var/opt/mssql/data -d mcr.microsoft.com/mssql/server:latest
