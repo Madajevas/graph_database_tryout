@@ -1,0 +1,19 @@
+@startuml
+
+Genre: name
+
+Movie: name
+Movie: year
+Movie: length
+Movie: language
+
+Movie -u-> Genre: is_of
+
+Person: name
+Person: gender
+Person: birth_date
+
+Person -u-> Movie: starred_in [as]
+Person -u-> Movie: directed
+
+@enduml
