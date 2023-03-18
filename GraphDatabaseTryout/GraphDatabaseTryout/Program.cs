@@ -1,6 +1,7 @@
 ﻿
 using deniszykov.CommandLine;
 
+using GraphDatabaseTryout.Data;
 using GraphDatabaseTryout.Migrations;
 
 class Program
@@ -16,6 +17,13 @@ class Program
     public static int Migrate(bool down = false)
     {
         Migrator.Migrate(down);
+
+        return 0;
+    }
+
+    public static int Load(string path)
+    {
+        DataLoader.Load(path);
 
         return 0;
     }
