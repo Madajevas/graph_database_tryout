@@ -50,9 +50,17 @@ namespace GraphDatabaseTryout.Data
 
         private void SaveMovies(IEnumerable<Movie> movies)
         {
+            IEnumerable<string> SaveGenres(string[] genres)
+            {
+                foreach (var genre in  genres)
+                {
+                    yield return genresRepository.SaveGenre(genre);
+                }
+            }
+
             foreach (var movie in movies)
             {
-                var genreNodeId = genresRepository.SaveGenre(movie.Genres);
+                var genreNodeIds = SaveGenres(movie.Genres).ToList();
             }
         }
     }

@@ -4,7 +4,7 @@ using CsvHelper.TypeConversion;
 
 using System.Globalization;
 
-namespace GraphDatabaseTryout.Data
+namespace GraphDatabaseTryout.Data.Converters
 {
     internal class NullableTypeConverter<T> : ITypeConverter where T : struct
     {

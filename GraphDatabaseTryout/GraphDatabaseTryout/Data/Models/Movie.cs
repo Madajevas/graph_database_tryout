@@ -1,8 +1,9 @@
 ﻿using CsvHelper.Configuration;
+using GraphDatabaseTryout.Data.Converters;
 
 namespace GraphDatabaseTryout.Data.Models
 {
-    internal record Movie(string TConst, string Type, string Name, bool IsAdult, uint? Year, uint? Length, string Genres);
+    internal record Movie(string TConst, string Type, string Name, bool IsAdult, uint? Year, uint? Length, string[] Genres);
     internal sealed class MovieMap : ClassMap<Movie>
     {
         public MovieMap()
@@ -13,7 +14,7 @@ namespace GraphDatabaseTryout.Data.Models
             Parameter(nameof(Movie.IsAdult)).Name("isAdult").TypeConverter<NullableTypeConverter<bool>>();
             Parameter(nameof(Movie.Year)).Name("startYear").TypeConverter<NullableTypeConverter<uint>>();
             Parameter(nameof(Movie.Length)).Name("runtimeMinutes").TypeConverter<NullableTypeConverter<uint>>();
-            Parameter(nameof(Movie.Genres)).Name("genres");
+            Parameter(nameof(Movie.Genres)).Name("genres").TypeConverter<ArrayConverter>();
         }
     }
 }

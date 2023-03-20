@@ -9,11 +9,10 @@ namespace GraphDatabaseTryout.Data.Repositories
     {
         // upsert is not really necessary, but since all this is to learn, why not
         private const string genreUpsertSql = """
-                    MERGE INTO genres old
+                    MERGE INTO genre old
                     USING (VALUES (@genre)) AS new (name)
                     ON old.name = new.name
-                    WHEN MATCHED THEN
-                         UPDATE SET old.name = new.name
+                    WHEN MATCHED THEN UPDATE SET old.name = new.name                -- this line is not needed
                     WHEN NOT MATCHED BY TARGET THEN INSERT (name) VALUES (name)
                     OUTPUT inserted.$node_id;
                     """;
