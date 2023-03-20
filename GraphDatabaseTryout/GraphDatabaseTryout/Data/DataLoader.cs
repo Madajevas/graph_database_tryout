@@ -2,6 +2,7 @@
 using CsvHelper.Configuration;
 
 using GraphDatabaseTryout.Data.Models;
+using GraphDatabaseTryout.Data.Repositories;
 
 using System.Globalization;
 
@@ -9,9 +10,17 @@ namespace GraphDatabaseTryout.Data
 {
     internal class DataLoader
     {
-        public static void Load(string path)
+        private readonly GenresRepository genresRepository;
+
+        public DataLoader(GenresRepository genresRepository)
         {
-            var movies = GetMovies(path).ToList();
+            this.genresRepository = genresRepository;
+        }
+
+        public void Load(string path)
+        {
+            var movies = GetMovies(path);
+            SaveMovies(movies);
         }
 
         private static IEnumerable<Movie> GetMovies(string path)
@@ -36,6 +45,14 @@ namespace GraphDatabaseTryout.Data
                 {
                     yield return movie;
                 }
+            }
+        }
+
+        private void SaveMovies(IEnumerable<Movie> movies)
+        {
+            foreach (var movie in movies)
+            {
+                var genreNodeId = genresRepository.SaveGenre(movie.Genres);
             }
         }
     }
