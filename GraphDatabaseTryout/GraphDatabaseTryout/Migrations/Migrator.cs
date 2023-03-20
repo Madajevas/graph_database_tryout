@@ -8,7 +8,7 @@ namespace GraphDatabaseTryout.Migrations
         public static void Migrate(bool down)
         {
             var connectionString = Environment.GetEnvironmentVariable("ConnectionString:Graph")
-            ?? throw new ArgumentException("Connection string missing");
+                ?? throw new ArgumentException("Connection string missing");
 
             using var services = new ServiceCollection()
                 .AddFluentMigratorCore()

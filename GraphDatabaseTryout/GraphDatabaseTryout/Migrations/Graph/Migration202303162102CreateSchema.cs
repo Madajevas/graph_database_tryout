@@ -9,7 +9,6 @@ namespace GraphDatabaseTryout.Migrations.Graph
         {
             Execute.Sql("""
                         CREATE TABLE genre (
-                            ID INTEGER PRIMARY KEY,
                             name VARCHAR(100)
                         ) AS NODE
                         """);
