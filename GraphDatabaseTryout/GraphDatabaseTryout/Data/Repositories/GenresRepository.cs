@@ -1,5 +1,7 @@
 ﻿using Dapper;
 
+using Microsoft.Extensions.Caching.Memory;
+
 using System.Data;
 
 namespace GraphDatabaseTryout.Data.Repositories
@@ -18,14 +20,19 @@ namespace GraphDatabaseTryout.Data.Repositories
                     """;
 
         private readonly IDbConnection connection;
+        private readonly IMemoryCache cache;
 
-        public GenresRepository(IDbConnection connection)
+        public GenresRepository(IDbConnection connection, IMemoryCache cache)
         {
             this.connection = connection;
+            this.cache = cache;
         }
 
         // TODO: make async
         // TODO: strongly type return value?
-        public string SaveGenre(string genre) => connection.ExecuteScalar<string>(genreUpsertSql, new { genre });
+        public string SaveGenre(string genre)
+        {
+            return cache.GetOrCreate(genre, _ => connection.ExecuteScalar<string>(genreUpsertSql, new { genre }))!;
+        }
     }
 }

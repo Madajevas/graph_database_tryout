@@ -64,7 +64,7 @@ namespace GraphDatabaseTryout.Data
                 }
             }
 
-            foreach (var movie in movies.Take(100_000))
+            foreach (var movie in movies)
             {
                 var genreNodeIds = SaveGenres(movie.Genres).ToList();
             }
