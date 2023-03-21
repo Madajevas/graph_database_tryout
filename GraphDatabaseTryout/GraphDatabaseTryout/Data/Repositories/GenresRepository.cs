@@ -12,7 +12,7 @@ namespace GraphDatabaseTryout.Data.Repositories
                     MERGE INTO genre old
                     USING (VALUES (@genre)) AS new (name)
                     ON old.name = new.name
-                    WHEN MATCHED THEN UPDATE SET old.name = new.name                -- this line is not needed
+                    WHEN MATCHED THEN UPDATE set old.name = new.name
                     WHEN NOT MATCHED BY TARGET THEN INSERT (name) VALUES (name)
                     OUTPUT inserted.$node_id;
                     """;

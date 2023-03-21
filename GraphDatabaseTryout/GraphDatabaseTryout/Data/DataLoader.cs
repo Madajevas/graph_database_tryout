@@ -3,7 +3,9 @@ using CsvHelper.Configuration;
 
 using GraphDatabaseTryout.Data.Models;
 using GraphDatabaseTryout.Data.Repositories;
+using GraphDatabaseTryout.Performance;
 
+using System.Diagnostics;
 using System.Globalization;
 
 namespace GraphDatabaseTryout.Data
@@ -50,15 +52,19 @@ namespace GraphDatabaseTryout.Data
 
         private void SaveMovies(IEnumerable<Movie> movies)
         {
+            using var _ = new PerformanceCounter(nameof(SaveMovies));
+
             IEnumerable<string> SaveGenres(string[] genres)
             {
                 foreach (var genre in  genres)
                 {
-                    yield return genresRepository.SaveGenre(genre);
+                    var nodeId = genresRepository.SaveGenre(genre);
+                    Debug.Assert(nodeId != null);
+                    yield return nodeId;
                 }
             }
 
-            foreach (var movie in movies)
+            foreach (var movie in movies.Take(100_000))
             {
                 var genreNodeIds = SaveGenres(movie.Genres).ToList();
             }
