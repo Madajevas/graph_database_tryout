@@ -21,10 +21,10 @@ namespace GraphDatabaseTryout.Data
             this.moviesRepository = moviesRepository;
         }
 
-        public void Load(string path)
+        public Task LoadAsync(string path)
         {
             var movies = GetMovies(path);
-            SaveMovies(movies);
+            return SaveMoviesAsync(movies);
         }
 
         private static IEnumerable<Movie> GetMovies(string path)
@@ -52,15 +52,15 @@ namespace GraphDatabaseTryout.Data
             }
         }
 
-        private void SaveMovies(IEnumerable<Movie> movies)
+        private async Task SaveMoviesAsync(IEnumerable<Movie> movies)
         {
-            using var _ = new PerformanceCounter(nameof(SaveMovies));
+            using var _ = new PerformanceCounter(nameof(SaveMoviesAsync));
 
-            IEnumerable<string> SaveGenres(string[] genres)
+            async IAsyncEnumerable<string> SaveGenres(string[] genres)
             {
                 foreach (var genre in  genres)
                 {
-                    var nodeId = genresRepository.SaveGenre(genre);
+                    var nodeId = await genresRepository.SaveGenreAsync(genre);
                     Debug.Assert(nodeId != null);
                     yield return nodeId;
                 }
@@ -68,8 +68,8 @@ namespace GraphDatabaseTryout.Data
 
             foreach (var movie in movies.Take(100_000))
             {
-                var genreNodeIds = SaveGenres(movie.Genres).ToList();
-                var movieNodeId = moviesRepository.Save(movie);
+                var genreNodeIds = await SaveGenres(movie.Genres).ToListAsync();
+                var movieNodeId = await moviesRepository.SaveAsync(movie);
                 Debug.Assert(movieNodeId != null);
             }
         }

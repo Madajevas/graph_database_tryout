@@ -24,7 +24,7 @@ class Program
         return 0;
     }
 
-    public static int Load(string path)
+    public static async Task<int> Load(string path)
     {
         var services = new ServiceCollection();
         services.AddDataLoading();
@@ -33,7 +33,7 @@ class Program
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
 
-        scope.ServiceProvider.GetRequiredService<DataLoader>().Load(path);
+        await scope.ServiceProvider.GetRequiredService<DataLoader>().LoadAsync(path);
 
         return 0;
     }

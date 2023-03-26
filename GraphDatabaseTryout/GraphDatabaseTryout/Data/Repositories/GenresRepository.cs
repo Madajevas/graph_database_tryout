@@ -28,11 +28,10 @@ namespace GraphDatabaseTryout.Data.Repositories
             this.cache = cache;
         }
 
-        // TODO: make async
         // TODO: strongly type return value?
-        public string SaveGenre(string genre)
+        public Task<string> SaveGenreAsync(string genre)
         {
-            return cache.GetOrCreate(genre, _ => connection.ExecuteScalar<string>(genreUpsertSql, new { genre }))!;
+            return cache.GetOrCreateAsync(genre, _ => connection.ExecuteScalarAsync<string>(genreUpsertSql, new { genre }))!;
         }
     }
 }

@@ -23,9 +23,9 @@ namespace GraphDatabaseTryout.Data.Repositories
         }
 
         // TODO: bulk insert?
-        public string Save(Movie movie)
+        public Task<string> SaveAsync(Movie movie)
         {
-            return connection.ExecuteScalar<string>(insertSql, movie);
+            return connection.ExecuteScalarAsync<string>(insertSql, movie);
         }
     }
 }
