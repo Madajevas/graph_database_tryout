@@ -20,6 +20,7 @@ namespace GraphDatabaseTryout.Data
             });
 
             services.AddScoped<GenresRepository>();
+            services.AddScoped<MoviesRepository>();
 
             services.AddScoped<DataLoader>();
         }

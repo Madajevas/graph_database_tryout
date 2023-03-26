@@ -13,10 +13,12 @@ namespace GraphDatabaseTryout.Data
     internal class DataLoader
     {
         private readonly GenresRepository genresRepository;
+        private readonly MoviesRepository moviesRepository;
 
-        public DataLoader(GenresRepository genresRepository)
+        public DataLoader(GenresRepository genresRepository, MoviesRepository moviesRepository)
         {
             this.genresRepository = genresRepository;
+            this.moviesRepository = moviesRepository;
         }
 
         public void Load(string path)
@@ -64,9 +66,11 @@ namespace GraphDatabaseTryout.Data
                 }
             }
 
-            foreach (var movie in movies)
+            foreach (var movie in movies.Take(100_000))
             {
                 var genreNodeIds = SaveGenres(movie.Genres).ToList();
+                var movieNodeId = moviesRepository.Save(movie);
+                Debug.Assert(movieNodeId != null);
             }
         }
     }
