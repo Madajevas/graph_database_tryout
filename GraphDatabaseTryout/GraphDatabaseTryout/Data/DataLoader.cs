@@ -66,11 +66,14 @@ namespace GraphDatabaseTryout.Data
                 }
             }
 
-            foreach (var movie in movies.Take(100_000))
+            foreach (var movieChunk in movies.Take(100_000).Chunk(100))
             {
-                var genreNodeIds = await SaveGenres(movie.Genres).ToListAsync();
-                var movieNodeId = await moviesRepository.SaveAsync(movie);
-                Debug.Assert(movieNodeId != null);
+                var genresNodeIdsTasks = movieChunk.Select(movie => SaveGenres(movie.Genres));
+                var movieIdsTask = await moviesRepository.SaveAsync(movieChunk).ToListAsync();
+
+                // var genreNodeIds = await SaveGenres(movie.Genres).ToListAsync();
+                // var movieNodeId = await moviesRepository.SaveAsync(movie);
+                // Debug.Assert(movieNodeId != null);
             }
         }
     }
