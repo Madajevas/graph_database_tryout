@@ -14,11 +14,13 @@ namespace GraphDatabaseTryout.Data
     {
         private readonly GenresRepository genresRepository;
         private readonly MoviesRepository moviesRepository;
+        private readonly MovieToGenreEdgesRepository movieToGenreEdgesRepository;
 
-        public DataLoader(GenresRepository genresRepository, MoviesRepository moviesRepository)
+        public DataLoader(GenresRepository genresRepository, MoviesRepository moviesRepository, MovieToGenreEdgesRepository movieToGenreEdgesRepository)
         {
             this.genresRepository = genresRepository;
             this.moviesRepository = moviesRepository;
+            this.movieToGenreEdgesRepository = movieToGenreEdgesRepository;
         }
 
         public Task LoadAsync(string path)
@@ -66,10 +68,25 @@ namespace GraphDatabaseTryout.Data
                 }
             }
 
+            async IAsyncEnumerable<(string, IEnumerable<string>)> GetAssociations(IList<string> movieNodeIds, IList<IAsyncEnumerable<string>> genreNodeIdsEnumerables)
+            {
+                for (var i = 0; i < movieNodeIds.Count; i++)
+                {
+                    var genderNodeIds = await genreNodeIdsEnumerables[i].ToListAsync();
+
+                    yield return (movieNodeIds[i], genderNodeIds);
+                }
+            }
+
             foreach (var movieChunk in movies.Take(100_000).Chunk(100))
             {
-                var genresNodeIdsTasks = movieChunk.Select(movie => SaveGenres(movie.Genres));
+                var genresNodeIdsTasks = movieChunk.Select(movie => SaveGenres(movie.Genres)).ToList();
                 var movieIdsTask = await moviesRepository.SaveAsync(movieChunk).ToListAsync();
+
+                await movieToGenreEdgesRepository.AssociateAsync(await GetAssociations(movieIdsTask, genresNodeIdsTasks).ToListAsync());
+
+                // this is getting out of hand.
+                // I must be looking at this wrong
 
                 // var genreNodeIds = await SaveGenres(movie.Genres).ToListAsync();
                 // var movieNodeId = await moviesRepository.SaveAsync(movie);
