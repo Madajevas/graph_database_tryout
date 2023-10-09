@@ -5,6 +5,8 @@ using GraphDatabaseTryout.Data;
 using GraphDatabaseTryout.Migrations;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.ObjectPool;
 
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
@@ -41,6 +43,7 @@ class Program
             .Build();
 
         var services = new ServiceCollection();
+        services.TryAddSingleton<ObjectPoolProvider, DefaultObjectPoolProvider>();
         services.AddDataLoading();
         services.AddMemoryCache();
 

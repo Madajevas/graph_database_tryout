@@ -2,12 +2,13 @@
 
 using GraphDatabaseTryout.Data.Models;
 
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.ObjectPool;
 
 using System.Data;
 using System.Diagnostics.Metrics;
 using System.Text;
 using System.Threading.Channels;
+using System.Threading.Tasks.Dataflow;
 
 namespace GraphDatabaseTryout.Data.Repositories
 {
@@ -24,31 +25,30 @@ namespace GraphDatabaseTryout.Data.Repositories
 
         private const int BatchSize = 20;
         private string insertBatchSql = GetBulkInsertQuery(BatchSize);
-
+        private ActionBlock<Movie> insertBlock;
         private readonly IDbConnection connection;
         private readonly GenresRepository genresRepository;
-        private readonly IServiceProvider serviceProvider;
-        private readonly Channel<Movie> insertChannel;
-        private readonly Task[] insertTasks;
+        private readonly ObjectPool<IDbConnection> connectionPool;
 
-        public MoviesRepository(IDbConnection connection, GenresRepository genresRepository, IServiceProvider serviceProvider)
+        public MoviesRepository(IDbConnection connection, GenresRepository genresRepository, ObjectPool<IDbConnection> connectionPool)
         {
             this.connection = connection;
             this.genresRepository = genresRepository;
-            this.serviceProvider = serviceProvider;
-            insertChannel = Channel.CreateUnbounded<Movie>();
-            insertTasks = new[] {
-                StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop(),
-                StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop(),
-            }; 
+            this.connectionPool = connectionPool;
+
+            var options = new ExecutionDataflowBlockOptions
+            {
+                MaxDegreeOfParallelism = 10,
+            };
+            insertBlock = new ActionBlock<Movie>(SaveAsyncInternal, options);
 
             Dapper.SqlMapper.AddTypeMap(typeof(uint?), DbType.Int32);
             Dapper.SqlMapper.AddTypeMap(typeof(uint), DbType.Int32);
         }
 
-        public ValueTask SaveAsync(Movie movie)
+        public Task SaveAsync(Movie movie)
         {
-            return insertChannel.Writer.WriteAsync(movie);
+            return insertBlock.SendAsync(movie);
         }
 
         public async IAsyncEnumerable<string> SaveAsync(IEnumerable<Movie> movies)
@@ -66,26 +66,25 @@ namespace GraphDatabaseTryout.Data.Repositories
 
         public async ValueTask DisposeAsync()
         {
-            insertChannel.Writer.Complete();
-            await Task.WhenAll(insertTasks);
+            insertBlock.Complete();
+            await insertBlock.Completion;
         }
 
-        private async Task StartInsertLoop()
+        private async Task SaveAsyncInternal(Movie movie)
         {
-            var connection = serviceProvider.GetService<IDbConnection>();
-            await foreach (var movie in insertChannel.Reader.ReadAllAsync())
+            var connection = connectionPool.Get();
+
+            var movieNodeId = await connection.ExecuteScalarAsync<string>(insertSql, movie);
+            var insertOneSql = "INSERT INTO is_of VALUES (@MovieId, @GenreId)";
+            foreach (var genre in movie.Genres)
             {
-                var movieNodeId = await connection.ExecuteScalarAsync<string>(insertSql, movie);
-
-                var insertOneSql = "INSERT INTO is_of VALUES (@MovieId, @GenreId)";
-                foreach (var genre in movie.Genres)
-                {
-                    var genreId = await genresRepository.SaveGenreAsync(genre);
-                    await connection.ExecuteAsync(insertOneSql, new { MovieId = movieNodeId, GenreId = genreId });
-                }
-
-                moviesCounter.Add(1);
+                var genreId = await genresRepository.SaveGenreAsync(genre);
+                await connection.ExecuteAsync(insertOneSql, new { MovieId = movieNodeId, GenreId = genreId });
             }
+
+            connectionPool.Return(connection);
+
+            moviesCounter.Add(1);
         }
 
         private static string GetBulkInsertQuery(int batchSize)
