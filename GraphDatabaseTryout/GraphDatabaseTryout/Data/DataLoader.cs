@@ -78,6 +78,15 @@ namespace GraphDatabaseTryout.Data
                 }
             }
 
+            foreach (var movie in movies.Take(100_000))
+            {
+                var genresNodeIds = await SaveGenres(movie.Genres).ToListAsync();
+                var movieNodeId = await moviesRepository.SaveAsync(movie);
+                await movieToGenreEdgesRepository.AssociateAsync(movieNodeId, genresNodeIds);
+            }
+
+            return;
+
             foreach (var movieChunk in movies.Take(100_000).Chunk(100))
             {
                 var genresNodeIdsTasks = movieChunk.Select(movie => SaveGenres(movie.Genres)).ToList();

@@ -27,6 +27,16 @@ namespace GraphDatabaseTryout.Data.Repositories
             }
         }
 
+        public async Task AssociateAsync(string movieNodeId, IEnumerable<string> genreNodeIds)
+        {
+            var insertOneSql = "INSERT INTO is_of VALUES (@MovieId, @GenreId)";
+
+            foreach (var genreId in genreNodeIds)
+            {
+                await connection.ExecuteAsync(insertOneSql, new { MovieId = movieNodeId, GenreId = genreId });
+            }
+        }
+
         private static string GetBulkInsertQuery(int batchSize)
         {
             var builder = new StringBuilder("INSERT INTO is_of VALUES");

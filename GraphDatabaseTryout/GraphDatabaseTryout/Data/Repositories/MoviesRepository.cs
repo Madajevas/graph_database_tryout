@@ -28,6 +28,7 @@ namespace GraphDatabaseTryout.Data.Repositories
             this.connection = connection;
 
             Dapper.SqlMapper.AddTypeMap(typeof(uint?), DbType.Int32);
+            Dapper.SqlMapper.AddTypeMap(typeof(uint), DbType.Int32);
         }
 
         public Task<string> SaveAsync(Movie movie)
