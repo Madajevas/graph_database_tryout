@@ -12,4 +12,15 @@ Time has come. Let's check it out: look into query complexity and performance. F
 
 
 ## Dev notes
-* podman run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=test-1234" -p 1433:1433 -v ./mssql_data:/var/opt/mssql/data -d mcr.microsoft.com/mssql/server:latest
+### Run SQL Server
+```powershell
+podman machine start
+podman run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=test-1234" -p 1433:1433 -v ./mssql_data:/var/opt/mssql/data -d mcr.microsoft.com/mssql/server:latest
+```
+
+### Cleanup data
+```sql
+truncate table is_of;
+truncate table genre;
+truncate table movie;
+```
