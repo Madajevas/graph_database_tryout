@@ -3,7 +3,6 @@ using CsvHelper.Configuration;
 
 using GraphDatabaseTryout.Data.Models;
 using GraphDatabaseTryout.Data.Repositories;
-using GraphDatabaseTryout.Performance;
 
 using System.Diagnostics;
 using System.Globalization;
@@ -76,7 +75,7 @@ namespace GraphDatabaseTryout.Data
                 }
             }
 
-            foreach (var movie in movies.Take(100_000))
+            foreach (var movie in movies.Take(100_00))
             {
                 // var genresNodeIds = await SaveGenres(movie.Genres).ToListAsync();
                 await moviesRepository.SaveAsync(movie);

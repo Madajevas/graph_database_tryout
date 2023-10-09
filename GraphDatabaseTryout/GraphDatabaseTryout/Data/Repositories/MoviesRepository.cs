@@ -2,9 +2,8 @@
 
 using GraphDatabaseTryout.Data.Models;
 
-using Microsoft.Extensions.DependencyInjection;
-
 using System.Data;
+using System.Diagnostics.Metrics;
 using System.Text;
 using System.Threading.Channels;
 
@@ -12,6 +11,10 @@ namespace GraphDatabaseTryout.Data.Repositories
 {
     internal class MoviesRepository : IAsyncDisposable
     {
+        private static Meter meter = new Meter("Test.Metrics");
+        private static Counter<int> moviesCounter = meter.CreateCounter<int>("Movies.Inserted");
+
+
         private const string insertSql = """
             INSERT INTO movie (ID, name, year, length) OUTPUT Inserted.$node_id
             VALUES (@TConst, @Name, @Year, @Length)
@@ -78,6 +81,7 @@ namespace GraphDatabaseTryout.Data.Repositories
                     await connection.ExecuteAsync(insertOneSql, new { MovieId = movieNodeId, GenreId = genreId });
                 }
 
+                moviesCounter.Add(1);
             }
         }
 
