@@ -2,6 +2,8 @@
 
 using GraphDatabaseTryout.Data.Models;
 
+using Microsoft.Extensions.DependencyInjection;
+
 using System.Data;
 using System.Diagnostics.Metrics;
 using System.Text;
@@ -22,23 +24,23 @@ namespace GraphDatabaseTryout.Data.Repositories
 
         private const int BatchSize = 20;
         private string insertBatchSql = GetBulkInsertQuery(BatchSize);
-        // private const string insert10Sql = """
-        //     INSERT INTO movie (ID, name, year, length) OUTPUT Inserted.$node_id
-        //     VALUES (@TConst0, @Name0, @Year0, @Length0), (@TConst1, @Name1, @Year1, @Length1), (@TConst2, @Name2, @Year2, @Length2), (@TConst3, @Name3, @Year3, @Length3), (@TConst4, @Name4, @Year4, @Length4), (@TConst5, @Name5, @Year5, @Length5), (@TConst6, @Name6, @Year6, @Length6), (@TConst7, @Name7, @Year7, @Length7), (@TConst8, @Name8, @Year8, @Length8), (@TConst9, @Name9, @Year9, @Length9)
-        //     """;
 
         private readonly IDbConnection connection;
         private readonly GenresRepository genresRepository;
+        private readonly IServiceProvider serviceProvider;
         private readonly Channel<Movie> insertChannel;
         private readonly Task[] insertTasks;
 
-        public MoviesRepository(IDbConnection connection, GenresRepository genresRepository)
+        public MoviesRepository(IDbConnection connection, GenresRepository genresRepository, IServiceProvider serviceProvider)
         {
             this.connection = connection;
             this.genresRepository = genresRepository;
-
+            this.serviceProvider = serviceProvider;
             insertChannel = Channel.CreateUnbounded<Movie>();
-            insertTasks = new[] { StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop() }; 
+            insertTasks = new[] {
+                StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop(),
+                StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop(),
+            }; 
 
             Dapper.SqlMapper.AddTypeMap(typeof(uint?), DbType.Int32);
             Dapper.SqlMapper.AddTypeMap(typeof(uint), DbType.Int32);
@@ -70,6 +72,7 @@ namespace GraphDatabaseTryout.Data.Repositories
 
         private async Task StartInsertLoop()
         {
+            var connection = serviceProvider.GetService<IDbConnection>();
             await foreach (var movie in insertChannel.Reader.ReadAllAsync())
             {
                 var movieNodeId = await connection.ExecuteScalarAsync<string>(insertSql, movie);

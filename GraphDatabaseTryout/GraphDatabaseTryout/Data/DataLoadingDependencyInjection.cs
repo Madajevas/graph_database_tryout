@@ -12,7 +12,7 @@ namespace GraphDatabaseTryout.Data
     {
         public static void AddDataLoading(this IServiceCollection services)
         {
-            services.AddScoped<IDbConnection>(_ =>
+            services.AddTransient<IDbConnection>(_ =>
             {
                 var connectionString = Environment.GetEnvironmentVariable("ConnectionString:Graph")
                     ?? throw new ArgumentException("Connection string missing");

@@ -75,7 +75,7 @@ namespace GraphDatabaseTryout.Data
                 }
             }
 
-            foreach (var movie in movies.Take(100_00))
+            foreach (var movie in movies.Take(100_000))
             {
                 // var genresNodeIds = await SaveGenres(movie.Genres).ToListAsync();
                 await moviesRepository.SaveAsync(movie);
