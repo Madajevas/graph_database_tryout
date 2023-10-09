@@ -56,8 +56,6 @@ namespace GraphDatabaseTryout.Data
 
         private async Task SaveMoviesAsync(IEnumerable<Movie> movies)
         {
-            using var _ = new PerformanceCounter(nameof(SaveMoviesAsync));
-
             async IAsyncEnumerable<string> SaveGenres(string[] genres)
             {
                 foreach (var genre in  genres)
@@ -80,9 +78,10 @@ namespace GraphDatabaseTryout.Data
 
             foreach (var movie in movies.Take(100_000))
             {
-                var genresNodeIds = await SaveGenres(movie.Genres).ToListAsync();
-                var movieNodeId = await moviesRepository.SaveAsync(movie);
-                await movieToGenreEdgesRepository.AssociateAsync(movieNodeId, genresNodeIds);
+                // var genresNodeIds = await SaveGenres(movie.Genres).ToListAsync();
+                await moviesRepository.SaveAsync(movie);
+
+                // await movieToGenreEdgesRepository.AssociateAsync(movie, genresNodeIds);
             }
 
             return;

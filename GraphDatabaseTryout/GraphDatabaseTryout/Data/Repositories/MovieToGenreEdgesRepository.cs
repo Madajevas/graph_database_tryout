@@ -1,5 +1,7 @@
 ﻿using Dapper;
 
+using GraphDatabaseTryout.Data.Models;
+
 using System.Data;
 using System.Text;
 
@@ -24,6 +26,16 @@ namespace GraphDatabaseTryout.Data.Repositories
                 var insertSql = associationsChunk.Length == BatchSize ? insertAssociationSql : GetBulkInsertQuery(associationsChunk.Length);
 
                 await connection.ExecuteAsync(insertSql, GetParameters(associationsChunk));
+            }
+        }
+
+        public async Task AssociateAsync(Movie movie, IEnumerable<string> genreNodeIds)
+        {
+            var insertOneWithSelect = "INSERT INTO is_of VALUES ((SELECT $node_id FROM movie where ID = @MovieId), @GenreId)";
+
+            foreach (var genreId in genreNodeIds)
+            {
+                await connection.ExecuteAsync(insertOneWithSelect, new { MovieId = movie.TConst, GenreId = genreId });
             }
         }
 

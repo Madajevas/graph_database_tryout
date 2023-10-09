@@ -5,7 +5,7 @@
       // "commandLineArgs": "migrate",
       "commandLineArgs": "load ../../../Data",
       "environmentVariables": {
-        "ConnectionString:Graph": "Server=127.0.0.1;Database=main;User Id=sa;Password=test-1234;Database=test_graph"
+        "ConnectionString:Graph": "Server=127.0.0.1;Database=main;User Id=sa;Password=test-1234;Database=test_graph;MultipleActiveResultSets=True"
       }
     }
   }

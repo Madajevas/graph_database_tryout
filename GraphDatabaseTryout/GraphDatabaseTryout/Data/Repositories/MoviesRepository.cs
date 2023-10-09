@@ -2,12 +2,15 @@
 
 using GraphDatabaseTryout.Data.Models;
 
+using Microsoft.Extensions.DependencyInjection;
+
 using System.Data;
 using System.Text;
+using System.Threading.Channels;
 
 namespace GraphDatabaseTryout.Data.Repositories
 {
-    internal class MoviesRepository
+    internal class MoviesRepository : IAsyncDisposable
     {
         private const string insertSql = """
             INSERT INTO movie (ID, name, year, length) OUTPUT Inserted.$node_id
@@ -22,18 +25,25 @@ namespace GraphDatabaseTryout.Data.Repositories
         //     """;
 
         private readonly IDbConnection connection;
+        private readonly GenresRepository genresRepository;
+        private readonly Channel<Movie> insertChannel;
+        private readonly Task[] insertTasks;
 
-        public MoviesRepository(IDbConnection connection)
+        public MoviesRepository(IDbConnection connection, GenresRepository genresRepository)
         {
             this.connection = connection;
+            this.genresRepository = genresRepository;
+
+            insertChannel = Channel.CreateUnbounded<Movie>();
+            insertTasks = new[] { StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop(), StartInsertLoop() }; 
 
             Dapper.SqlMapper.AddTypeMap(typeof(uint?), DbType.Int32);
             Dapper.SqlMapper.AddTypeMap(typeof(uint), DbType.Int32);
         }
 
-        public Task<string> SaveAsync(Movie movie)
+        public ValueTask SaveAsync(Movie movie)
         {
-            return connection.ExecuteScalarAsync<string>(insertSql, movie);
+            return insertChannel.Writer.WriteAsync(movie);
         }
 
         public async IAsyncEnumerable<string> SaveAsync(IEnumerable<Movie> movies)
@@ -46,6 +56,28 @@ namespace GraphDatabaseTryout.Data.Repositories
                 {
                     yield return id;
                 }
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            insertChannel.Writer.Complete();
+            await Task.WhenAll(insertTasks);
+        }
+
+        private async Task StartInsertLoop()
+        {
+            await foreach (var movie in insertChannel.Reader.ReadAllAsync())
+            {
+                var movieNodeId = await connection.ExecuteScalarAsync<string>(insertSql, movie);
+
+                var insertOneSql = "INSERT INTO is_of VALUES (@MovieId, @GenreId)";
+                foreach (var genre in movie.Genres)
+                {
+                    var genreId = await genresRepository.SaveGenreAsync(genre);
+                    await connection.ExecuteAsync(insertOneSql, new { MovieId = movieNodeId, GenreId = genreId });
+                }
+
             }
         }
 

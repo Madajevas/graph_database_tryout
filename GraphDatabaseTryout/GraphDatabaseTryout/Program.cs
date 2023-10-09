@@ -3,9 +3,9 @@ using deniszykov.CommandLine;
 
 using GraphDatabaseTryout.Data;
 using GraphDatabaseTryout.Migrations;
+using GraphDatabaseTryout.Performance;
 
 using Microsoft.Extensions.DependencyInjection;
-
 
 class Program
 {
@@ -31,7 +31,8 @@ class Program
         services.AddMemoryCache();
 
         using var provider = services.BuildServiceProvider();
-        using var scope = provider.CreateScope();
+        using var _ = new PerformanceCounter(nameof(Load));
+        await using var scope = provider.CreateAsyncScope();
 
         await scope.ServiceProvider.GetRequiredService<DataLoader>().LoadAsync(path);
 
