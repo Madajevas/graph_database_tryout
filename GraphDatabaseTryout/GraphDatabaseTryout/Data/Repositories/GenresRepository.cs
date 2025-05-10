@@ -1,12 +1,12 @@
 ﻿using Dapper;
 
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Hybrid;
 
 using System.Data;
 
 namespace GraphDatabaseTryout.Data.Repositories
 {
-    // TODO: does this makes sence with graph api?
+    // TODO: does this makes sense with graph api?
     internal class GenresRepository
     {
         // upsert is not really necessary, but since all this is to learn, why not
@@ -20,18 +20,18 @@ namespace GraphDatabaseTryout.Data.Repositories
                     """;
 
         private readonly IDbConnection connection;
-        private readonly IMemoryCache cache;
+        private readonly HybridCache cache;
 
-        public GenresRepository(IDbConnection connection, IMemoryCache cache)
+        public GenresRepository(IDbConnection connection, HybridCache cache)
         {
             this.connection = connection;
             this.cache = cache;
         }
 
         // TODO: strongly type return value?
-        public Task<string> SaveGenreAsync(string genre)
+        public ValueTask<string> SaveGenreAsync(string genre)
         {
-            return cache.GetOrCreateAsync(genre, _ => connection.ExecuteScalarAsync<string>(genreUpsertSql, new { genre }))!;
+            return cache.GetOrCreateAsync<string>(genre, async _ => await connection.ExecuteScalarAsync<string>(genreUpsertSql, new { genre }));
         }
     }
 }

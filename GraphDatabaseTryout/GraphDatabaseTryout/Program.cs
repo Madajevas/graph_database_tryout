@@ -71,7 +71,7 @@ class Program
         var services = new ServiceCollection();
         services.TryAddSingleton<ObjectPoolProvider, DefaultObjectPoolProvider>();
         services.AddDataLoading();
-        services.AddMemoryCache();
+        services.AddHybridCache();
 
         using var provider = services.BuildServiceProvider();
         using var activitySource = new ActivitySource("Test.Performance");
