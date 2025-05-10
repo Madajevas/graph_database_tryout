@@ -14,10 +14,10 @@ namespace GraphDatabaseTryout.Migrations.Graph
                         """);
             Execute.Sql("""
                         CREATE TABLE movie (
-                            ID VARCHAR(10) PRIMARY KEY,
-                            name VARCHAR(200),
-                            year INTEGER NULL,
-                            length INTEGER NULL
+                            ID INTEGER PRIMARY KEY,
+                            name VARCHAR(300),
+                            year SMALLINT NULL,
+                            length SMALLINT NULL
                         )  AS NODE
                         """);
             Execute.Sql("""

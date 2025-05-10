@@ -35,7 +35,7 @@ namespace GraphDatabaseTryout.Data.Repositories
 
             foreach (var genreId in genreNodeIds)
             {
-                await connection.ExecuteAsync(insertOneWithSelect, new { MovieId = movie.TConst, GenreId = genreId });
+                await connection.ExecuteAsync(insertOneWithSelect, new { MovieId = movie.Id, GenreId = genreId });
             }
         }
 

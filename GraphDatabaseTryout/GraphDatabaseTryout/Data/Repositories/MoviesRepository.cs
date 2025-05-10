@@ -16,7 +16,7 @@ namespace GraphDatabaseTryout.Data.Repositories
 
         private const string insertSql = """
             INSERT INTO movie (ID, name, year, length) OUTPUT Inserted.$node_id
-            VALUES (@TConst, @Name, @Year, @Length)
+            VALUES (@Id, @Name, @Year, @Length)
             """;
 
         private readonly GenresRepository genresRepository;

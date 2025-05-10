@@ -3,12 +3,12 @@ using GraphDatabaseTryout.Data.Converters;
 
 namespace GraphDatabaseTryout.Data.Models
 {
-    internal record Movie(string TConst, string Type, string Name, bool IsAdult, uint? Year, uint? Length, string[] Genres);
+    internal record Movie(int Id, string Type, string Name, bool IsAdult, uint? Year, uint? Length, string[] Genres);
     internal sealed class MovieMap : ClassMap<Movie>
     {
         public MovieMap()
         {
-            Parameter(nameof(Movie.TConst)).Name("tconst");
+            Parameter(nameof(Movie.Id)).Name("tconst").TypeConverter<IdConverter>();
             Parameter(nameof(Movie.Type)).Name("titleType");
             Parameter(nameof(Movie.Name)).Name("originalTitle");
             Parameter(nameof(Movie.IsAdult)).Name("isAdult").TypeConverter<NullableTypeConverter<bool>>();
