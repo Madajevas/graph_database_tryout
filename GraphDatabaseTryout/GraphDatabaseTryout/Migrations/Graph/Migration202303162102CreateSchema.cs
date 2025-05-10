@@ -17,7 +17,7 @@ namespace GraphDatabaseTryout.Migrations.Graph
                             ID INTEGER PRIMARY KEY,
                             name VARCHAR(1000),
                             year SMALLINT NULL,
-                            length SMALLINT NULL
+                            length INTEGER NULL
                         )  AS NODE
                         """);
             Execute.Sql("""

@@ -35,7 +35,7 @@ namespace GraphDatabaseTryout.Data
                 // Mode = CsvMode.Escape,
                 TrimOptions = TrimOptions.Trim,
                 Quote = '\0',
-                BadDataFound = args => Console.WriteLine($"Bad row found: {args.RawRecord}"),
+                BadDataFound = args => Console.Write($"Bad row found: {args.RawRecord}"),
             };
 
             // using var reader = new StringReader("""
