@@ -39,7 +39,13 @@ class Program
         }
 
         // await Download("title.basics.tsv");
-        await Download("name.basics.tsv");
+        // await Download("name.basics.tsv");
+        // await Download("title.crew.tsv");
+        await Download("title.principals.tsv");
+        // await Download("title.episode.tsv");
+        // await Download("title.ratings.tsv");
+        // await Download("title.akas.tsv");
+
 
         return 0;
     }

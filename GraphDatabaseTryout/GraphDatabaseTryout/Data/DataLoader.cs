@@ -6,6 +6,8 @@ using GraphDatabaseTryout.Data.Repositories;
 
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Reflection.PortableExecutable;
 
 namespace GraphDatabaseTryout.Data
 {
@@ -24,38 +26,42 @@ namespace GraphDatabaseTryout.Data
 
         public Task LoadAsync(string path)
         {
-            var movies = GetMovies(path);
+            var movies = ParseFile<Movie, MovieMap>(Path.Combine(path, "title.basics.tsv"));
             return SaveMoviesAsync(movies);
         }
 
-        private static IEnumerable<Movie> GetMovies(string path)
+        private static IEnumerable<T> ParseFile<T, TMap>(string filePath) where TMap : ClassMap<T>
         {
-            var titleBasics = Path.Combine(path, "title.basics.tsv");
-
             var configuration = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 Delimiter = "\t",
                 // Mode = CsvMode.Escape,
                 TrimOptions = TrimOptions.Trim,
-
+                Quote = '\0',
                 BadDataFound = args => Console.WriteLine($"Bad row found: {args.RawRecord}"),
             };
 
-            using (var reader = new StreamReader(titleBasics))
-            using (var noQuotesSteam = new RemoveQuotesStream(reader))
-            using (var csv = new CsvReader(noQuotesSteam, configuration))
+            // using var reader = new StringReader("""
+            //     tconst	titleType	primaryTitle	originalTitle	isAdult	startYear	endYear	runtimeMinutes	genres
+            //     tt10233364	tvEpisode	"Rolling in the Deep Dish	"Rolling in the Deep Dish	0	2019	\N	\N	Reality-TV
+            //     tt10514794	tvEpisode	"Stranger Things" Seasons 1 & 2 in Under 4 Minutes	"Stranger Things" Seasons 1 & 2 in Under 4 Minutes	0	2019	\N	\N	News,Short
+            //     tt0073045	movie	"Giliap"	"Giliap"	0	1975	\N	137	Crime,Drama
+            //     
+            //     """);
+            using (var reader = new StreamReader(filePath))
+            using (var csv = new CsvReader(reader, configuration))
             {
-                csv.Context.RegisterClassMap<MovieMap>();
-                foreach (var movie in csv.GetRecords<Movie>())
+                csv.Context.RegisterClassMap<TMap>();
+                foreach (var item in csv.GetRecords<T>())
                 {
-                    yield return movie;
+                    yield return item;
                 }
             }
         }
 
         private async Task SaveMoviesAsync(IEnumerable<Movie> movies)
         {
-            foreach (var fewMovies in movies.Take(100_000).Chunk(20))
+            foreach (var fewMovies in movies/*.Skip(1_000_000)*/.Chunk(20))
             {
                 var inserts = fewMovies.AsParallel().Select(moviesRepository.SaveAsync);
                 await Task.WhenAll(inserts);
