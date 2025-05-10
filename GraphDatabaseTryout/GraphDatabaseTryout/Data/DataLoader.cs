@@ -40,6 +40,7 @@ namespace GraphDatabaseTryout.Data
 
             // using var reader = new StringReader("""
             //     tconst	titleType	primaryTitle	originalTitle	isAdult	startYear	endYear	runtimeMinutes	genres
+            //     tt10813978	tvEpisode	Y- the total ease of altering current flow at a given frequency and voltage. The reciprocal of impedance. A quantity, which in rectangular form is as useful for parallel circuitry as independence, is for circuits. The resultant of conductance and subsidence in parallel. The resultant of reciprocal resistance and reciprocal reactance in parallel.	Y- the total ease of altering current flow at a given frequency and voltage. The reciprocal of impedance. A quantity, which in rectangular form is as useful for parallel circuitry as independence, is for circuits. The resultant of conductance and subsidence in parallel. The resultant of reciprocal resistance and reciprocal reactance in parallel.	0	2019	\N	\N	Biography,Comedy,Drama
             //     tt10233364	tvEpisode	"Rolling in the Deep Dish	"Rolling in the Deep Dish	0	2019	\N	\N	Reality-TV
             //     tt10514794	tvEpisode	"Stranger Things" Seasons 1 & 2 in Under 4 Minutes	"Stranger Things" Seasons 1 & 2 in Under 4 Minutes	0	2019	\N	\N	News,Short
             //     tt0073045	movie	"Giliap"	"Giliap"	0	1975	\N	137	Crime,Drama
@@ -58,9 +59,9 @@ namespace GraphDatabaseTryout.Data
 
         private async Task SaveMoviesAsync(IEnumerable<Movie> movies)
         {
-            foreach (var fewMovies in movies/*.Skip(1_000_000)*/.Chunk(20))
+            foreach (var fewMovies in movies/*.Skip(1_000_000)*/.Chunk(200))
             {
-                var inserts = fewMovies.AsParallel().Select(moviesRepository.SaveAsync);
+                var inserts = fewMovies.Chunk(40).AsParallel().Select(moviesRepository.SaveAsync);
                 await Task.WhenAll(inserts);
             }
         }

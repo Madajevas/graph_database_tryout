@@ -44,8 +44,28 @@ namespace GraphDatabaseTryout.Data.Repositories
             }
 
             connectionPool.Return(connection);
-
             moviesCounter.Add(1);
+        }
+
+        public async Task SaveAsync(IReadOnlyCollection<Movie> movies)
+        {
+            var connection = connectionPool.Get();
+            using var transaction = connection.BeginTransaction();
+
+            foreach (var movie in movies)
+            {
+                var movieNodeId = await connection.ExecuteScalarAsync<string>(insertSql, movie, transaction);
+                var insertOneSql = "INSERT INTO is_of VALUES (@MovieId, @GenreId)";
+                foreach (var genre in movie.Genres)
+                {
+                    var genreId = await genresRepository.SaveGenreAsync(genre);
+                    await connection.ExecuteAsync(insertOneSql, new { MovieId = movieNodeId, GenreId = genreId }, transaction);
+                }
+            }
+
+            transaction.Commit();
+            connectionPool.Return(connection);
+            moviesCounter.Add(movies.Count);
         }
     }
 }
