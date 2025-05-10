@@ -27,13 +27,19 @@ class Program
 
     public static async Task<int> Download()
     {
-        var url = "https://datasets.imdbws.com/title.basics.tsv.gz";
-        using var client = new HttpClient();
-        using var response = await client.GetAsync(url);
-        using var stream = await response.Content.ReadAsStreamAsync();
-        using var gzipStream = new GZipStream(stream, CompressionMode.Decompress);
-        using var fileStream = File.Create(Path.Combine(@"..\..\..\data", "title.basics.tsv"));
-        await gzipStream.CopyToAsync(fileStream);
+        async Task Download(string file)
+        {
+            var url = $"https://datasets.imdbws.com/{file}.gz";
+            using var client = new HttpClient();
+            using var response = await client.GetAsync(url);
+            using var stream = await response.Content.ReadAsStreamAsync();
+            using var gzipStream = new GZipStream(stream, CompressionMode.Decompress);
+            using var fileStream = File.Create(Path.Combine(@"..\..\..\data", file));
+            await gzipStream.CopyToAsync(fileStream);
+        }
+
+        // await Download("title.basics.tsv");
+        await Download("name.basics.tsv");
 
         return 0;
     }

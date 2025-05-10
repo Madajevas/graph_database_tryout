@@ -55,49 +55,10 @@ namespace GraphDatabaseTryout.Data
 
         private async Task SaveMoviesAsync(IEnumerable<Movie> movies)
         {
-            async IAsyncEnumerable<string> SaveGenres(string[] genres)
+            foreach (var fewMovies in movies.Take(100_000).Chunk(20))
             {
-                foreach (var genre in  genres)
-                {
-                    var nodeId = await genresRepository.SaveGenreAsync(genre);
-                    Debug.Assert(nodeId != null);
-                    yield return nodeId;
-                }
-            }
-
-            async IAsyncEnumerable<(string, IEnumerable<string>)> GetAssociations(IList<string> movieNodeIds, IList<IAsyncEnumerable<string>> genreNodeIdsEnumerables)
-            {
-                for (var i = 0; i < movieNodeIds.Count; i++)
-                {
-                    var genderNodeIds = await genreNodeIdsEnumerables[i].ToListAsync();
-
-                    yield return (movieNodeIds[i], genderNodeIds);
-                }
-            }
-
-            foreach (var movie in movies.Take(100_000))
-            {
-                // var genresNodeIds = await SaveGenres(movie.Genres).ToListAsync();
-                await moviesRepository.SaveAsync(movie);
-
-                // await movieToGenreEdgesRepository.AssociateAsync(movie, genresNodeIds);
-            }
-
-            return;
-
-            foreach (var movieChunk in movies.Take(100_000).Chunk(100))
-            {
-                var genresNodeIdsTasks = movieChunk.Select(movie => SaveGenres(movie.Genres)).ToList();
-                var movieIdsTask = await moviesRepository.SaveAsync(movieChunk).ToListAsync();
-
-                await movieToGenreEdgesRepository.AssociateAsync(await GetAssociations(movieIdsTask, genresNodeIdsTasks).ToListAsync());
-
-                // this is getting out of hand.
-                // I must be looking at this wrong
-
-                // var genreNodeIds = await SaveGenres(movie.Genres).ToListAsync();
-                // var movieNodeId = await moviesRepository.SaveAsync(movie);
-                // Debug.Assert(movieNodeId != null);
+                var inserts = fewMovies.AsParallel().Select(moviesRepository.SaveAsync);
+                await Task.WhenAll(inserts);
             }
         }
     }

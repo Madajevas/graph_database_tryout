@@ -8,6 +8,7 @@ using Microsoft.Extensions.ObjectPool;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 
 namespace GraphDatabaseTryout.Data
 {
@@ -27,8 +28,8 @@ namespace GraphDatabaseTryout.Data
 
             services.TryAddSingleton<ObjectPool<IDbConnection>>(serviceProvider =>
             {
+                return new DefaultObjectPool<IDbConnection>(new DbConnectionsPoolPolicy(serviceProvider), 100);
                 var provider = serviceProvider.GetRequiredService<ObjectPoolProvider>();
-
                 return provider.Create(new DbConnectionsPoolPolicy(serviceProvider));
             });
 
@@ -64,6 +65,7 @@ namespace GraphDatabaseTryout.Data
 
         public bool Return(IDbConnection obj)
         {
+            Debug.Assert(obj.State == ConnectionState.Open, "Connection is not open");
             connections.Push(obj);
             return true;
         }
