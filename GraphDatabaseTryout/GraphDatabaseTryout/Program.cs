@@ -13,6 +13,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
 using System.Diagnostics;
+using System.IO.Compression;
 
 class Program
 {
@@ -24,6 +25,19 @@ class Program
             .Run();
     }
 
+    public static async Task<int> Download()
+    {
+        var url = "https://datasets.imdbws.com/title.basics.tsv.gz";
+        using var client = new HttpClient();
+        using var response = await client.GetAsync(url);
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var gzipStream = new GZipStream(stream, CompressionMode.Decompress);
+        using var fileStream = File.Create(Path.Combine("../../data", "title.basics.tsv"));
+        await gzipStream.CopyToAsync(fileStream);
+
+        return 0;
+    }
+
     public static int Migrate(bool down = false)
     {
         Migrator.Migrate(down);
@@ -31,7 +45,7 @@ class Program
         return 0;
     }
 
-    public static async Task<int> Load(string path)
+    public static async Task<int> Load(string path = "../../data")
     {
         using var meterProvider = Sdk.CreateMeterProviderBuilder()
             .AddConsoleExporter()
