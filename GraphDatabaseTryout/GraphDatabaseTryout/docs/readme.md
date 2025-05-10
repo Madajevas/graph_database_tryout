@@ -14,8 +14,7 @@ Time has come. Let's check it out: look into query complexity and performance. F
 ## Dev notes
 ### Run SQL Server
 ```powershell
-podman machine start
-podman run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=test-1234" -p 1433:1433 -v ./mssql_data:/var/opt/mssql/data -d mcr.microsoft.com/mssql/server:latest
+docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=test-1234" -p 1433:1433 --user root -v ./mssql_data:/var/opt/mssql/data -d mcr.microsoft.com/mssql/server:latest
 ```
 
 ### Cleanup data
