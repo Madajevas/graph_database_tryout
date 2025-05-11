@@ -36,7 +36,7 @@ namespace GraphDatabaseTryout.Data
 
             services.AddScoped<GenresRepository>();
             services.AddScoped<MoviesRepository>();
-            services.AddScoped<MovieToGenreEdgesRepository>();
+            services.AddScoped<PersonsRepository>();
 
             services.AddScoped<DataLoader>();
         }

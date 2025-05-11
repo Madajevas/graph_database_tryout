@@ -8,7 +8,7 @@ namespace GraphDatabaseTryout.Data.Models
     {
         public MovieMap()
         {
-            Parameter(nameof(Movie.Id)).Name("tconst").TypeConverter<IdConverter>();
+            Parameter(nameof(Movie.Id)).Name("tconst").TypeConverter(new IdConverter('t'));
             Parameter(nameof(Movie.Type)).Name("titleType");
             Parameter(nameof(Movie.Name)).Name("originalTitle");
             Parameter(nameof(Movie.IsAdult)).Name("isAdult").TypeConverter<NullableTypeConverter<bool>>();

@@ -10,21 +10,22 @@ namespace GraphDatabaseTryout.Data
 {
     internal class DataLoader
     {
-        private readonly GenresRepository genresRepository;
         private readonly MoviesRepository moviesRepository;
-        private readonly MovieToGenreEdgesRepository movieToGenreEdgesRepository;
+        private readonly PersonsRepository personsRepository;
 
-        public DataLoader(GenresRepository genresRepository, MoviesRepository moviesRepository, MovieToGenreEdgesRepository movieToGenreEdgesRepository)
+        public DataLoader(MoviesRepository moviesRepository, PersonsRepository personsRepository)
         {
-            this.genresRepository = genresRepository;
             this.moviesRepository = moviesRepository;
-            this.movieToGenreEdgesRepository = movieToGenreEdgesRepository;
+            this.personsRepository = personsRepository;
         }
 
         public Task LoadAsync(string path)
         {
-            var movies = ParseFile<Movie, MovieMap>(Path.Combine(path, "title.basics.tsv"));
-            return SaveMoviesAsync(movies);
+            // var movies = ParseFile<Movie, MovieMap>(Path.Combine(path, "title.basics.tsv"));
+            // return SaveMoviesAsync(movies);
+
+            var persons = ParseFile<Person, PersonMap>(Path.Combine(path, "name.basics.tsv"));
+            return SavePersonsAsync(persons);
         }
 
         private static IEnumerable<T> ParseFile<T, TMap>(string filePath) where TMap : ClassMap<T>
@@ -62,6 +63,15 @@ namespace GraphDatabaseTryout.Data
             foreach (var fewMovies in movies/*.Skip(1_000_000)*/.Chunk(200))
             {
                 var inserts = fewMovies.Chunk(40).AsParallel().Select(moviesRepository.SaveAsync);
+                await Task.WhenAll(inserts);
+            }
+        }
+
+        private async Task SavePersonsAsync(IEnumerable<Person> persons)
+        {
+            foreach (var fewPersons in persons/*.Skip(1_000_000)*/.Chunk(1000))
+            {
+                var inserts = fewPersons.Chunk(100).AsParallel().Select(personsRepository.SaveAsync);
                 await Task.WhenAll(inserts);
             }
         }

@@ -25,6 +25,11 @@ namespace GraphDatabaseTryout.Data.Converters
                 return text == "1";
             }
 
+            if (typeof(T) == typeof(ushort))
+            {
+                return ushort.Parse(text, CultureInfo.InvariantCulture);
+            }
+
             throw new InvalidOperationException("not implemented conversion");
         }
 

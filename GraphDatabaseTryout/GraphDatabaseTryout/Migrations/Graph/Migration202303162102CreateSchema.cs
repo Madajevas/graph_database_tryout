@@ -24,8 +24,8 @@ namespace GraphDatabaseTryout.Migrations.Graph
                         CREATE TABLE person (
                             ID INTEGER PRIMARY KEY,
                             name VARCHAR(100),
-                            gender VARCHAR(10) NULL,
-                            birth_date VARCHAR(10) NULL
+                            birth_year SMALLINT NULL,
+                            death_year SMALLINT NULL
                         )  AS NODE
                         """);
 
