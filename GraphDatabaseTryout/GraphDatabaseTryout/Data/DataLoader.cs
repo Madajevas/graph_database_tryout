@@ -8,24 +8,18 @@ using System.Globalization;
 
 namespace GraphDatabaseTryout.Data
 {
-    internal class DataLoader
+    internal class DataLoader(MoviesRepository moviesRepository, PersonsRepository personsRepository, JobsRepository jobsRepository)
     {
-        private readonly MoviesRepository moviesRepository;
-        private readonly PersonsRepository personsRepository;
-
-        public DataLoader(MoviesRepository moviesRepository, PersonsRepository personsRepository)
-        {
-            this.moviesRepository = moviesRepository;
-            this.personsRepository = personsRepository;
-        }
-
         public Task LoadAsync(string path)
         {
             // var movies = ParseFile<Movie, MovieMap>(Path.Combine(path, "title.basics.tsv"));
             // return SaveMoviesAsync(movies);
 
-            var persons = ParseFile<Person, PersonMap>(Path.Combine(path, "name.basics.tsv"));
-            return SavePersonsAsync(persons);
+            // var persons = ParseFile<Person, PersonMap>(Path.Combine(path, "name.basics.tsv"));
+            // return SavePersonsAsync(persons);
+
+            var jobs = ParseFile<Job, JobMap>(Path.Combine(path, "title.principals.tsv"));
+            return SaveJobsAsync(jobs);
         }
 
         private static IEnumerable<T> ParseFile<T, TMap>(string filePath) where TMap : ClassMap<T>
@@ -36,7 +30,7 @@ namespace GraphDatabaseTryout.Data
                 // Mode = CsvMode.Escape,
                 TrimOptions = TrimOptions.Trim,
                 Quote = '\0',
-                BadDataFound = args => Console.Write($"Bad row found: {args.RawRecord}"),
+                BadDataFound = args => { /*Console.Write($"Bad row found: {args.RawRecord}");*/ },
             };
 
             // using var reader = new StringReader("""
@@ -72,6 +66,16 @@ namespace GraphDatabaseTryout.Data
             foreach (var fewPersons in persons/*.Skip(1_000_000)*/.Chunk(1000))
             {
                 var inserts = fewPersons.Chunk(100).AsParallel().Select(personsRepository.SaveAsync);
+                await Task.WhenAll(inserts);
+            }
+        }
+
+        private async Task SaveJobsAsync(IEnumerable<Job> jobs)
+        {
+            string[] categories = ["actor", "actress", "director"];
+            foreach (var fewJobs in jobs.Where(j => categories.Contains(j.Category)).Chunk(1000))
+            {
+                var inserts = fewJobs.Chunk(200).AsParallel().Select(jobsRepository.SaveAsync);
                 await Task.WhenAll(inserts);
             }
         }

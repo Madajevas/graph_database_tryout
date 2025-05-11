@@ -30,7 +30,7 @@ namespace GraphDatabaseTryout.Migrations.Graph
                         """);
 
             Execute.Sql("CREATE TABLE is_of AS EDGE");
-            Execute.Sql("""CREATE TABLE starred_in ("as" VARCHAR(50)) AS EDGE""");
+            Execute.Sql("""CREATE TABLE starred_in ("as" VARCHAR(500)) AS EDGE""");
             Execute.Sql("CREATE TABLE directed AS EDGE");
         }
 
