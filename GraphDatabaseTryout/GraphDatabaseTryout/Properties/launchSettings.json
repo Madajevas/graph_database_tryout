@@ -2,9 +2,9 @@
   "profiles": {
     "GraphDatabaseTryout": {
       "commandName": "Project",
-      // "commandLineArgs": "migrate",
-      // "commandLineArgs": "load ../../../Data",
-      "commandLineArgs": "load",
+      //"commandLineArgs": "download E:\\datasets\\imdb",
+      "commandLineArgs": "migrate \"Server=127.0.0.1,1433;Database=main;User Id=sa;Password=test-1234;Database=test_graph;MultipleActiveResultSets=True;TrustServerCertificate=true;\"",
+      // "commandLineArgs": "load",
       "environmentVariables": {
         "ConnectionString:Graph": "Server=127.0.0.1,1433;Database=main;User Id=sa;Password=test-1234;Database=test_graph;MultipleActiveResultSets=True;TrustServerCertificate=true;",
 

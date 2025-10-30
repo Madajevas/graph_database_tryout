@@ -1,7 +1,4 @@
-﻿
-using deniszykov.CommandLine;
-
-using GraphDatabaseTryout.Data;
+﻿using GraphDatabaseTryout.Data;
 using GraphDatabaseTryout.Migrations;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -12,74 +9,80 @@ using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
+using System.CommandLine;
 using System.Diagnostics;
 using System.IO.Compression;
 
-class Program
+var rootCommand = new RootCommand("Graph Database checkout");
+
+var downloadDestinationArgument = new Argument<DirectoryInfo>("destination");
+var downloadCommand = new Command("download", "Downloads data files");
+downloadCommand.Arguments.Add(downloadDestinationArgument);
+downloadCommand.SetAction(async parseResult =>
 {
-    public static void Main(string[] arguments)
+    var directory = parseResult.GetRequiredValue(downloadDestinationArgument);
+    if (!directory.Exists)
     {
-        CommandLine
-            .CreateFromArguments(arguments)
-            .Use<Program>()
-            .Run();
+        throw new DirectoryNotFoundException();
     }
 
-    public static async Task<int> Download()
+    string[] files = ["title.basics.tsv", "name.basics.tsv", "title.crew.tsv", "title.principals.tsv", "title.episode.tsv", "title.ratings.tsv", "title.akas.tsv"];
+    using var client = new HttpClient();
+
+    foreach (var file in files)
     {
-        async Task Download(string file)
-        {
-            var url = $"https://datasets.imdbws.com/{file}.gz";
-            using var client = new HttpClient();
-            using var response = await client.GetAsync(url);
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using var gzipStream = new GZipStream(stream, CompressionMode.Decompress);
-            using var fileStream = File.Create(Path.Combine(@"..\..\..\data", file));
-            await gzipStream.CopyToAsync(fileStream);
-        }
-
-        // await Download("title.basics.tsv");
-        // await Download("name.basics.tsv");
-        // await Download("title.crew.tsv");
-        // await Download("title.principals.tsv");
-        // await Download("title.episode.tsv");
-        // await Download("title.ratings.tsv");
-        await Download("title.akas.tsv");
-
-
-        return 0;
+        var url = $"https://datasets.imdbws.com/{file}.gz";
+        using var response = await client.GetAsync(url);
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var gzipStream = new GZipStream(stream, CompressionMode.Decompress);
+        using var fileStream = File.Create(Path.Combine(directory.FullName, file));
+        await gzipStream.CopyToAsync(fileStream);
     }
+});
+rootCommand.Subcommands.Add(downloadCommand);
 
-    public static int Migrate(bool down = false)
-    {
-        Migrator.Migrate(down);
+var connectionStringArgument = new Argument<string>("connectionString");
 
-        return 0;
-    }
+var migrateCommand = new Command("migrate", "Prepares database");
+migrateCommand.Arguments.Add(connectionStringArgument);
+migrateCommand.SetAction(parseResult =>
+{
+    var connectionString = parseResult.GetRequiredValue(connectionStringArgument);
+    Migrator.Migrate(connectionString, false);
+});
+rootCommand.Subcommands.Add(migrateCommand);
 
-    public static async Task<int> Load(string path = @"..\..\..\data")
-    {
-        using var meterProvider = Sdk.CreateMeterProviderBuilder()
-            .AddConsoleExporter()
-            .AddMeter("Test.Metrics")
-            .Build();
-        using var traceProvider = Sdk.CreateTracerProviderBuilder()
-            .AddConsoleExporter()
-            .AddSource("Test.Performance")
-            .Build();
+var sourceFilesDirectoryArgument = new Argument<DirectoryInfo>("source");
+var loadCommand = new Command("load", "Loads data into database");
+loadCommand.Arguments.Add(sourceFilesDirectoryArgument);
+loadCommand.Arguments.Add(connectionStringArgument);
+loadCommand.SetAction(async parseResult =>
+{
+    var source = parseResult.GetRequiredValue(sourceFilesDirectoryArgument);
+    var connectionString = parseResult.GetRequiredValue(connectionStringArgument);
 
-        var services = new ServiceCollection();
-        services.TryAddSingleton<ObjectPoolProvider, DefaultObjectPoolProvider>();
-        services.AddDataLoading();
-        services.AddHybridCache();
+    using var meterProvider = Sdk.CreateMeterProviderBuilder()
+         .AddConsoleExporter()
+         .AddMeter("Test.Metrics")
+         .Build();
+    using var traceProvider = Sdk.CreateTracerProviderBuilder()
+        .AddConsoleExporter()
+        .AddSource("Test.Performance")
+        .Build();
 
-        using var provider = services.BuildServiceProvider();
-        using var activitySource = new ActivitySource("Test.Performance");
-        using var _ = activitySource.StartActivity("Load");
-        await using var scope = provider.CreateAsyncScope();
+    var services = new ServiceCollection();
+    services.TryAddSingleton<ObjectPoolProvider, DefaultObjectPoolProvider>();
+    services.AddDataLoading(connectionString);
+    services.AddHybridCache();
 
-        await scope.ServiceProvider.GetRequiredService<DataLoader>().LoadAsync(path);
+    using var provider = services.BuildServiceProvider();
+    using var activitySource = new ActivitySource("Test.Performance");
+    using var _ = activitySource.StartActivity("Load");
+    await using var scope = provider.CreateAsyncScope();
 
-        return 0;
-    }
-}
+    await scope.ServiceProvider.GetRequiredService<DataLoader>().LoadAsync(source.FullName);
+});
+rootCommand.Subcommands.Add(loadCommand);
+
+
+await rootCommand.Parse(args).InvokeAsync();

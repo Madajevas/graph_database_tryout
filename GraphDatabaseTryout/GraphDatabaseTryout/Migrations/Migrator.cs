@@ -5,11 +5,8 @@ namespace GraphDatabaseTryout.Migrations
 {
     internal class Migrator
     {
-        public static void Migrate(bool down)
+        public static void Migrate(string connectionString, bool down)
         {
-            var connectionString = Environment.GetEnvironmentVariable("ConnectionString:Graph")
-                ?? throw new ArgumentException("Connection string missing");
-
             using var services = new ServiceCollection()
                 .AddFluentMigratorCore()
                 .ConfigureRunner(rb => rb

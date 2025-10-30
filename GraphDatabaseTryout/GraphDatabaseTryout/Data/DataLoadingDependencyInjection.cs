@@ -14,15 +14,9 @@ namespace GraphDatabaseTryout.Data
 {
     internal static class DataLoadingDependencyInjection
     {
-        public static void AddDataLoading(this IServiceCollection services)
+        public static void AddDataLoading(this IServiceCollection services, string connectionString)
         {
-            services.AddTransient<IDbConnection>(_ =>
-            {
-                var connectionString = Environment.GetEnvironmentVariable("ConnectionString:Graph")
-                    ?? throw new ArgumentException("Connection string missing");
-
-                return new SqlConnection(connectionString);
-            });
+            services.AddTransient<IDbConnection>(_ => new SqlConnection(connectionString));
             services.Decorate<IDbConnection, DbConnectionProxy>();
 
 
