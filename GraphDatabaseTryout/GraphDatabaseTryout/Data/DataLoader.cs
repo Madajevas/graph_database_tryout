@@ -12,8 +12,8 @@ namespace GraphDatabaseTryout.Data
     {
         public Task LoadAsync(string path)
         {
-            // var movies = ParseFile<Movie, MovieMap>(Path.Combine(path, "title.basics.tsv"));
-            // return SaveMoviesAsync(movies);
+            var movies = ParseFile<Movie, MovieMap>(Path.Combine(path, "title.basics.tsv"));
+            return SaveMoviesAsync(movies);
 
             // var persons = ParseFile<Person, PersonMap>(Path.Combine(path, "name.basics.tsv"));
             // return SavePersonsAsync(persons);
@@ -54,9 +54,9 @@ namespace GraphDatabaseTryout.Data
 
         private async Task SaveMoviesAsync(IEnumerable<Movie> movies)
         {
-            foreach (var fewMovies in movies/*.Skip(1_000_000)*/.Chunk(200))
+            foreach (var fewMovies in movies.Chunk(800))
             {
-                var inserts = fewMovies.Chunk(40).AsParallel().Select(moviesRepository.SaveAsync);
+                var inserts = fewMovies.Chunk(100).AsParallel().Select(moviesRepository.SaveAsync);
                 await Task.WhenAll(inserts);
             }
         }

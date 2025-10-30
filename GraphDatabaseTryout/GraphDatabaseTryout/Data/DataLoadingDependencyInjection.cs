@@ -16,9 +16,7 @@ namespace GraphDatabaseTryout.Data
     {
         public static void AddDataLoading(this IServiceCollection services, string connectionString)
         {
-            services.AddTransient<IDbConnection>(_ => new SqlConnection(connectionString));
-            services.Decorate<IDbConnection, DbConnectionProxy>();
-
+            services.AddTransient<SqlConnection>(_ => new SqlConnection(connectionString));
 
             services.TryAddSingleton<ObjectPool<IDbConnection>>(serviceProvider =>
             {
@@ -63,58 +61,6 @@ namespace GraphDatabaseTryout.Data
             Debug.Assert(obj.State == ConnectionState.Open, "Connection is not open");
             connections.Push(obj);
             return true;
-        }
-    }
-
-    internal class DbConnectionProxy : DbConnection, IDisposable
-    {
-        private readonly IDbConnection connection;
-
-        public DbConnectionProxy(IDbConnection connection)
-        {
-            this.connection = connection;
-
-            Open();  // dapper opens and closes connection, concurrently it causes troubles
-        }
-
-        public void Dispose()
-        {
-            Close();
-        }
-
-        public override string ConnectionString { get => connection.ConnectionString; set => connection.ConnectionString = value; }
-
-        public override string Database => connection.Database;
-
-        public override string DataSource => (connection as DbConnection).DataSource;
-
-        public override string ServerVersion => (connection as DbConnection).ServerVersion;
-
-        public override ConnectionState State => connection.State;
-
-        public override void ChangeDatabase(string databaseName)
-        {
-            connection.ChangeDatabase(databaseName);
-        }
-
-        public override void Close()
-        {
-            connection?.Close();
-        }
-
-        public override void Open()
-        {
-            connection.Open();
-        }
-
-        protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
-        {
-            return connection.BeginTransaction() as DbTransaction;
-        }
-
-        protected override DbCommand CreateDbCommand()
-        {
-            return connection.CreateCommand() as DbCommand;
         }
     }
 }

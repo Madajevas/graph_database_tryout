@@ -3,8 +3,8 @@
     "GraphDatabaseTryout": {
       "commandName": "Project",
       //"commandLineArgs": "download E:\\datasets\\imdb",
-      "commandLineArgs": "migrate \"Server=127.0.0.1,1433;Database=main;User Id=sa;Password=test-1234;Database=test_graph;MultipleActiveResultSets=True;TrustServerCertificate=true;\"",
-      // "commandLineArgs": "load",
+      // "commandLineArgs": "migrate \"Server=127.0.0.1,1433;Database=main;User Id=sa;Password=test-1234;Database=test_graph;MultipleActiveResultSets=True;TrustServerCertificate=true;\"",
+      "commandLineArgs": "load E:\\datasets\\imdb \"Server=127.0.0.1,1433;Database=main;User Id=sa;Password=test-1234;Database=test_graph;MultipleActiveResultSets=True;TrustServerCertificate=true;Pooling=true\" ",
       "environmentVariables": {
         "ConnectionString:Graph": "Server=127.0.0.1,1433;Database=main;User Id=sa;Password=test-1234;Database=test_graph;MultipleActiveResultSets=True;TrustServerCertificate=true;",
 

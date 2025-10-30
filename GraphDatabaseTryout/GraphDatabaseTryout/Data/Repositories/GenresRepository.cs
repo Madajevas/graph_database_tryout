@@ -1,8 +1,7 @@
 ﻿using Dapper;
 
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Hybrid;
-
-using System.Data;
 
 namespace GraphDatabaseTryout.Data.Repositories
 {
@@ -19,12 +18,13 @@ namespace GraphDatabaseTryout.Data.Repositories
                     OUTPUT inserted.$node_id;
                     """;
 
-        private readonly IDbConnection connection;
+        private readonly SqlConnection connection;
         private readonly HybridCache cache;
 
-        public GenresRepository(IDbConnection connection, HybridCache cache)
+        public GenresRepository(SqlConnection connection, HybridCache cache)
         {
             this.connection = connection;
+            this.connection.Open();
             this.cache = cache;
         }
 
