@@ -10,16 +10,17 @@ namespace GraphDatabaseTryout.Data
 {
     internal class DataLoader(MoviesRepository moviesRepository, PersonsRepository personsRepository, JobsRepository jobsRepository)
     {
-        public Task LoadAsync(string path)
+        public async Task LoadAsync(string path)
         {
             var movies = ParseFile<Movie, MovieMap>(Path.Combine(path, "title.basics.tsv"));
-            return SaveMoviesAsync(movies);
+            await moviesRepository.SaveAsync(movies);
+            return;
 
             // var persons = ParseFile<Person, PersonMap>(Path.Combine(path, "name.basics.tsv"));
             // return SavePersonsAsync(persons);
 
-            var jobs = ParseFile<Job, JobMap>(Path.Combine(path, "title.principals.tsv"));
-            return SaveJobsAsync(jobs);
+            // var jobs = ParseFile<Job, JobMap>(Path.Combine(path, "title.principals.tsv"));
+            // return SaveJobsAsync(jobs);
         }
 
         private static IEnumerable<T> ParseFile<T, TMap>(string filePath) where TMap : ClassMap<T>
@@ -49,15 +50,6 @@ namespace GraphDatabaseTryout.Data
                 {
                     yield return item;
                 }
-            }
-        }
-
-        private async Task SaveMoviesAsync(IEnumerable<Movie> movies)
-        {
-            foreach (var fewMovies in movies.Chunk(800))
-            {
-                var inserts = fewMovies.Chunk(100).AsParallel().Select(moviesRepository.SaveAsync);
-                await Task.WhenAll(inserts);
             }
         }
 

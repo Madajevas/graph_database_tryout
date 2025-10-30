@@ -4,105 +4,148 @@ using GraphDatabaseTryout.Data.Models;
 
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.ObjectPool;
 
-using System;
 using System.Data;
 using System.Diagnostics.Metrics;
+using System.Threading.Tasks.Dataflow;
 
-using static System.Runtime.InteropServices.JavaScript.JSType;
+namespace GraphDatabaseTryout.Data.Repositories;
 
-namespace GraphDatabaseTryout.Data.Repositories
+internal class MoviesRepository
 {
-    internal class MoviesRepository
+    private static Meter meter = new Meter("Test.Metrics");
+    private static Counter<int> moviesCounter = meter.CreateCounter<int>("Movies.Inserted");
+
+    private const string outputSql = """
+        INSERT INTO movie (ID, name, year, length)
+        OUTPUT Inserted.$node_id
+        SELECT ID, name, year, length FROM #movie
+        """;
+
+    private readonly GenresRepository genresRepository;
+    private readonly IServiceProvider provider;
+
+    public MoviesRepository(GenresRepository genresRepository, IServiceProvider provider)
     {
-        private static Meter meter = new Meter("Test.Metrics");
-        private static Counter<int> moviesCounter = meter.CreateCounter<int>("Movies.Inserted");
+        this.genresRepository = genresRepository;
+        this.provider = provider;
+        Dapper.SqlMapper.AddTypeMap(typeof(uint?), DbType.Int32);
+        Dapper.SqlMapper.AddTypeMap(typeof(uint), DbType.Int32);
+    }
 
-        private const string outputSql = """
-            INSERT INTO movie (ID, name, year, length)
-            OUTPUT Inserted.$node_id
-            SELECT ID, name, year, length FROM #movie
-            """;
+    public async Task SaveAsync(IEnumerable<Movie> movies)
+    {
+        var blockOptions = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 10 };
 
-        private readonly GenresRepository genresRepository;
-        private readonly IServiceProvider provider;
+        var batchBock = new BatchBlock<Movie>(100);
+        var insertMoviesBlock = new TransformBlock<IReadOnlyCollection<Movie>, IReadOnlyCollection<(string MovieId, Movie Movie)>>(GetInsertMovies, blockOptions);
+        batchBock.LinkTo(insertMoviesBlock);
+        var insertGenresBlock = new TransformBlock<IReadOnlyCollection<(string MovieId, Movie Movie)>, int>(GetInsertGenres, blockOptions);
+        insertMoviesBlock.LinkTo(insertGenresBlock);
+        var reportBlock = new ActionBlock<int>(moviesCounter.Add);
+        insertGenresBlock.LinkTo(reportBlock);
 
-        public MoviesRepository(GenresRepository genresRepository, IServiceProvider provider)
+        foreach (var movie in movies)
         {
-            this.genresRepository = genresRepository;
-            this.provider = provider;
-            Dapper.SqlMapper.AddTypeMap(typeof(uint?), DbType.Int32);
-            Dapper.SqlMapper.AddTypeMap(typeof(uint), DbType.Int32);
+            batchBock.Post(movie);
         }
+        batchBock.Complete();
+        await reportBlock.Completion;
+    }
 
-        public async Task SaveAsync(IReadOnlyCollection<Movie> movies)
+    private async Task<int> GetInsertGenres(IReadOnlyCollection<(string MovieId, Movie Movie)> movies)
+    {
+        using var connection = provider.GetRequiredService<SqlConnection>();
+        await connection.OpenAsync();
+        using var transaction = connection.BeginTransaction();
+
+        await connection.ExecuteAsync("""
+            CREATE TABLE #movie_genre
+            (
+                [from_id] nvarchar(1000) NOT NULL,
+                [to_id] nvarchar(1000) NOT NULL
+            ); 
+            """, transaction: transaction);
+
+        var sqlBulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
         {
-            using var connection = provider.GetRequiredService<SqlConnection>();
-            await connection.OpenAsync();
-            using var transaction = connection.BeginTransaction();
+            DestinationTableName = "#movie_genre",
+            BatchSize = 100,
+        };
 
-            await connection.ExecuteAsync("""
-                create table #movie
-                (
-                    [ID] int not NULL,
-                    [name] varchar(1000) NULL,
-                    [year] smallint NULL,
-                    [length] int NULL
-                ); 
-                """, transaction: transaction);
-            var sqlBulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
+        var table = new DataTable();
+        table.Columns.Add("from_id", typeof(string));
+        table.Columns.Add("to_id", typeof(string));
+        foreach (var (movieId, movie) in movies)
+        {
+            foreach (var genre in movie.Genres)
             {
-                DestinationTableName = "#movie",
-                BatchSize = 100,
-            };
-            sqlBulkCopy.ColumnMappings.Add(nameof(Movie.Id), "ID");
-            sqlBulkCopy.ColumnMappings.Add(nameof(Movie.Name), "name");
-            sqlBulkCopy.ColumnMappings.Add(nameof(Movie.Year), "year");
-            sqlBulkCopy.ColumnMappings.Add(nameof(Movie.Length), "length");
-
-            var table = new DataTable();
-            table.Columns.Add(nameof(Movie.Id), typeof(int));
-            table.Columns.Add(nameof(Movie.Name), typeof(string));
-            table.Columns.Add(nameof(Movie.Year), typeof(uint));
-            table.Columns.Add(nameof(Movie.Length), typeof(uint));
-
-            foreach (var movie in movies)
-            {
+                var genreId = await genresRepository.SaveGenreAsync(genre);
                 var row = table.NewRow();
-                row[nameof(Movie.Id)] = movie.Id;
-                row[nameof(Movie.Name)] = movie.Name;
-                row[nameof(Movie.Year)] = movie.Year.HasValue ? movie.Year.Value : DBNull.Value;
-                row[nameof(Movie.Length)] = movie.Length.HasValue ? movie.Length.Value : DBNull.Value;
+                row["from_id"] = movieId;
+                row["to_id"] = genreId;
                 table.Rows.Add(row);
             }
-
-            await sqlBulkCopy.WriteToServerAsync(table);
-            var movieNodeIds = await connection.QueryAsync<string>(outputSql, transaction: transaction);
-
-            var movieGenreBulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
-            {
-                DestinationTableName = "is_of",
-                BatchSize = 100,
-            };
-            var table2 = new DataTable();
-            table2.Columns.Add("$from_id", typeof(string));
-            table2.Columns.Add("$to_id", typeof(string));
-            foreach (var (movieId, movie) in movieNodeIds.Zip(movies))
-            {
-                foreach (var genre in movie.Genres)
-                {
-                    var genreId = await genresRepository.SaveGenreAsync(genre);
-                    var row = table2.NewRow();
-                    row["$from_id"] = movieId;
-                    row["$to_id"] = genreId;
-                }
-            }
-            await movieGenreBulkCopy.WriteToServerAsync(table2);
-
-
-            transaction.Commit();
-            moviesCounter.Add(movies.Count);
         }
+
+        await sqlBulkCopy.WriteToServerAsync(table);
+
+        string copySql = """
+            INSERT INTO is_of
+            SELECT from_id, to_id FROM #movie_genre
+            """;
+        await connection.ExecuteAsync(copySql, transaction: transaction);
+
+        await transaction.CommitAsync();
+
+        return movies.Count;
+    }
+
+    private async Task<IReadOnlyCollection<(string MovieId, Movie Movie)>> GetInsertMovies(IReadOnlyCollection<Movie> movies)
+    {
+        using var connection = provider.GetRequiredService<SqlConnection>();
+        await connection.OpenAsync();
+        using var transaction = connection.BeginTransaction();
+
+        await connection.ExecuteAsync("""
+            CREATE TABLE #movie
+            (
+                [ID] int not NULL,
+                [name] varchar(1000) NULL,
+                [year] smallint NULL,
+                [length] int NULL
+            ); 
+            """, transaction: transaction);
+        var sqlBulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
+        {
+            DestinationTableName = "#movie",
+            BatchSize = 100,
+        };
+        sqlBulkCopy.ColumnMappings.Add(nameof(Movie.Id), "ID");
+        sqlBulkCopy.ColumnMappings.Add(nameof(Movie.Name), "name");
+        sqlBulkCopy.ColumnMappings.Add(nameof(Movie.Year), "year");
+        sqlBulkCopy.ColumnMappings.Add(nameof(Movie.Length), "length");
+
+        var table = new DataTable();
+        table.Columns.Add(nameof(Movie.Id), typeof(int));
+        table.Columns.Add(nameof(Movie.Name), typeof(string));
+        table.Columns.Add(nameof(Movie.Year), typeof(uint));
+        table.Columns.Add(nameof(Movie.Length), typeof(uint));
+        foreach (var movie in movies)
+        {
+            var row = table.NewRow();
+            row[nameof(Movie.Id)] = movie.Id;
+            row[nameof(Movie.Name)] = movie.Name;
+            row[nameof(Movie.Year)] = movie.Year.HasValue ? movie.Year.Value : DBNull.Value;
+            row[nameof(Movie.Length)] = movie.Length.HasValue ? movie.Length.Value : DBNull.Value;
+            table.Rows.Add(row);
+        }
+
+        await sqlBulkCopy.WriteToServerAsync(table);
+        var movieNodeIds = await connection.QueryAsync<string>(outputSql, transaction: transaction);
+
+        await transaction.CommitAsync();
+
+        return movieNodeIds.Zip(movies).ToArray();
     }
 }
