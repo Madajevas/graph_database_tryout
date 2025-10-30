@@ -35,9 +35,10 @@ internal class MoviesRepository
 
     public async Task SaveAsync(IEnumerable<Movie> movies)
     {
-        var blockOptions = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 10 };
+        var blockOptions = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 16, BoundedCapacity = 5 };
 
-        var batchBock = new BatchBlock<Movie>(100);
+        var batchBock = new BatchBlock<Movie>(100, new GroupingDataflowBlockOptions { BoundedCapacity = 1000 });
+
         var insertMoviesBlock = new TransformBlock<IReadOnlyCollection<Movie>, IReadOnlyCollection<(string MovieId, Movie Movie)>>(GetInsertMovies, blockOptions);
         batchBock.LinkTo(insertMoviesBlock);
         var insertGenresBlock = new TransformBlock<IReadOnlyCollection<(string MovieId, Movie Movie)>, int>(GetInsertGenres, blockOptions);
@@ -47,7 +48,7 @@ internal class MoviesRepository
 
         foreach (var movie in movies)
         {
-            batchBock.Post(movie);
+            await batchBock.SendAsync(movie);
         }
         batchBock.Complete();
         await reportBlock.Completion;
