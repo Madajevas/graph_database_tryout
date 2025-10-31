@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 using System.Diagnostics.Metrics;
 using System.Threading.Tasks.Dataflow;
-using System.Transactions;
 
 namespace GraphDatabaseTryout.Data.Repositories
 {
@@ -37,21 +36,10 @@ namespace GraphDatabaseTryout.Data.Repositories
             var blockOptions = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 16, BoundedCapacity = 5 };
             var linkOptions = new DataflowLinkOptions { PropagateCompletion = true };
 
-            IEnumerable<(string sql, Job job)> ToSql(Job job)
-            {
-                if (job.Category == "actor" || job.Category == "actress")
-                {
-                    yield return (insertActorSql, job);
-                }
-                else if (job.Category == "director")
-                {
-                    yield return (insertDirectorSql, job);
-                }
-            }
-            var toSqlBlock = new TransformManyBlock<Job, (string sql, Job job)>(ToSql, blockOptions);
-            var batchBock = new BatchBlock<(string sql, Job job)>(1000, new GroupingDataflowBlockOptions { BoundedCapacity = 1000 });
-            toSqlBlock.LinkTo(batchBock, linkOptions);
-            var insertJobsBlock = new TransformBlock<IReadOnlyCollection<(string sql, Job job)>, int>(async jobs =>
+            var toCommandBlock = new TransformManyBlock<Job, SqlBatchCommand>(ToCommand, blockOptions);
+            var batchBock = new BatchBlock<SqlBatchCommand>(1000, new GroupingDataflowBlockOptions { BoundedCapacity = 5000 });
+            toCommandBlock.LinkTo(batchBock, linkOptions);
+            var insertJobsBlock = new TransformBlock<IReadOnlyCollection<SqlBatchCommand>, int>(async commands =>
             {
                 using var connection = provider.GetRequiredService<SqlConnection>();
                 await connection.OpenAsync();
@@ -59,33 +47,15 @@ namespace GraphDatabaseTryout.Data.Repositories
 
                 var batch = connection.CreateBatch();
                 batch.Transaction = transaction;
-                foreach (var (sql, job) in jobs)
+                foreach (var command in commands)
                 {
-                    var command = batch.CreateBatchCommand();
-                    command.CommandText = sql;
-                    command.CommandType = System.Data.CommandType.Text;
-                    var personIdParameter = command.CreateParameter();
-                    personIdParameter.ParameterName = "@PersonId";
-                    personIdParameter.Value = job.PersonId;
-                    command.Parameters.Add(personIdParameter);
-                    var movieIdParameter = command.CreateParameter();
-                    movieIdParameter.ParameterName = "@MovieId";
-                    movieIdParameter.Value = job.MovieId;
-                    command.Parameters.Add(movieIdParameter);
-                    if (sql == insertActorSql)
-                    {
-                        var characterParameter = command.CreateParameter();
-                        characterParameter.ParameterName = "@Character";
-                        characterParameter.Value = job.Character ?? (object)DBNull.Value;
-                        command.Parameters.Add(characterParameter);
-                    }
                     batch.BatchCommands.Add(command);
                 }
                 await batch.ExecuteNonQueryAsync();
 
                 await transaction.CommitAsync();
 
-                return jobs.Count;
+                return commands.Count;
 
             }, blockOptions);
             batchBock.LinkTo(insertJobsBlock, linkOptions);
@@ -94,10 +64,49 @@ namespace GraphDatabaseTryout.Data.Repositories
 
             foreach (var job in jobs)
             {
-                await toSqlBlock.SendAsync(job);
+                await toCommandBlock.SendAsync(job);
             }
-            toSqlBlock.Complete();
+            toCommandBlock.Complete();
             await reportBlock.Completion;
+        }
+
+        private static IEnumerable<SqlBatchCommand> ToCommand(Job job)
+        {
+            if (job.Category == "actor" || job.Category == "actress")
+            {
+                var command = CreateBaseCommand(job);
+                command.CommandText = insertActorSql;
+
+                var characterParameter = command.CreateParameter();
+                characterParameter.ParameterName = "@Character";
+                characterParameter.Value = job.Character ?? (object)DBNull.Value;
+                command.Parameters.Add(characterParameter);
+
+                yield return command;
+            }
+            else if (job.Category == "director")
+            {
+                var command = CreateBaseCommand(job);
+                command.CommandText = insertDirectorSql;
+                yield return command;
+            }
+        }
+
+        private static SqlBatchCommand CreateBaseCommand(Job job)
+        {
+            var command = new SqlBatchCommand();
+
+            var personIdParameter = command.CreateParameter();
+            personIdParameter.ParameterName = "@PersonId";
+            personIdParameter.Value = job.PersonId;
+            command.Parameters.Add(personIdParameter);
+
+            var movieIdParameter = command.CreateParameter();
+            movieIdParameter.ParameterName = "@MovieId";
+            movieIdParameter.Value = job.MovieId;
+            command.Parameters.Add(movieIdParameter);
+
+            return command;
         }
     }
 }
