@@ -23,7 +23,7 @@ namespace GraphDatabaseTryout.Migrations.Graph
             Execute.Sql("""
                         CREATE TABLE person (
                             ID INTEGER PRIMARY KEY,
-                            name VARCHAR(100),
+                            name VARCHAR(200),
                             birth_year SMALLINT NULL,
                             death_year SMALLINT NULL
                         )  AS NODE
