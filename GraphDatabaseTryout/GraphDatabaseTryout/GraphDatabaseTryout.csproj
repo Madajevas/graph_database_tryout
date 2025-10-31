@@ -21,6 +21,7 @@
     <PackageReference Include="Scrutor" Version="6.0.1" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-rc.2.25502.107" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+    <PackageReference Include="Z.Dapper.Plus" Version="8.0.3" />
   </ItemGroup>
 
 </Project>

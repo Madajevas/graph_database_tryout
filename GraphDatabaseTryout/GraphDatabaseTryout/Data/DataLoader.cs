@@ -19,15 +19,17 @@ namespace GraphDatabaseTryout.Data
             //     await moviesRepository.SaveAsync(movies);
             // }
 
-            using (activitySource.StartActivity("Load Persons"))
-            {
-                var persons = ParseFile<Person, PersonMap>(Path.Combine(path, "name.basics.tsv"));
-                await personsRepository.SaveAsync(persons);
-            }
-            return;
+            // using (activitySource.StartActivity("Load Persons"))
+            // {
+            //     var persons = ParseFile<Person, PersonMap>(Path.Combine(path, "name.basics.tsv"));
+            //     await personsRepository.SaveAsync(persons);
+            // }
 
-            // var jobs = ParseFile<Job, JobMap>(Path.Combine(path, "title.principals.tsv"));
-            // return SaveJobsAsync(jobs);
+            using (activitySource.StartActivity("Load Jobs"))
+            {
+                var jobs = ParseFile<Job, JobMap>(Path.Combine(path, "title.principals.tsv"));
+                await jobsRepository.SaveAsync(jobs);
+            }
         }
 
         private static IEnumerable<T> ParseFile<T, TMap>(string filePath) where TMap : ClassMap<T>
@@ -57,16 +59,6 @@ namespace GraphDatabaseTryout.Data
                 {
                     yield return item;
                 }
-            }
-        }
-
-        private async Task SaveJobsAsync(IEnumerable<Job> jobs)
-        {
-            string[] categories = ["actor", "actress", "director"];
-            foreach (var fewJobs in jobs.Where(j => categories.Contains(j.Category)).Chunk(1000))
-            {
-                var inserts = fewJobs.Chunk(200).AsParallel().Select(jobsRepository.SaveAsync);
-                await Task.WhenAll(inserts);
             }
         }
     }
