@@ -36,15 +36,16 @@ internal class MoviesRepository
     public async Task SaveAsync(IEnumerable<Movie> movies)
     {
         var blockOptions = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 16, BoundedCapacity = 5 };
+        var linkOptions = new DataflowLinkOptions { PropagateCompletion = true };
 
-        var batchBock = new BatchBlock<Movie>(100, new GroupingDataflowBlockOptions { BoundedCapacity = 1000 });
+        var batchBock = new BatchBlock<Movie>(200, new GroupingDataflowBlockOptions { BoundedCapacity = 1000 });
 
         var insertMoviesBlock = new TransformBlock<IReadOnlyCollection<Movie>, IReadOnlyCollection<(string MovieId, Movie Movie)>>(GetInsertMovies, blockOptions);
-        batchBock.LinkTo(insertMoviesBlock);
+        batchBock.LinkTo(insertMoviesBlock, linkOptions);
         var insertGenresBlock = new TransformBlock<IReadOnlyCollection<(string MovieId, Movie Movie)>, int>(GetInsertGenres, blockOptions);
-        insertMoviesBlock.LinkTo(insertGenresBlock);
+        insertMoviesBlock.LinkTo(insertGenresBlock, linkOptions);
         var reportBlock = new ActionBlock<int>(moviesCounter.Add);
-        insertGenresBlock.LinkTo(reportBlock);
+        insertGenresBlock.LinkTo(reportBlock, linkOptions);
 
         foreach (var movie in movies)
         {
@@ -71,7 +72,7 @@ internal class MoviesRepository
         var sqlBulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
         {
             DestinationTableName = "#movie_genre",
-            BatchSize = 100,
+            BatchSize = 200,
         };
 
         var table = new DataTable();
@@ -120,7 +121,7 @@ internal class MoviesRepository
         var sqlBulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
         {
             DestinationTableName = "#movie",
-            BatchSize = 100,
+            BatchSize = 200,
         };
         sqlBulkCopy.ColumnMappings.Add(nameof(Movie.Id), "ID");
         sqlBulkCopy.ColumnMappings.Add(nameof(Movie.Name), "name");

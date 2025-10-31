@@ -75,10 +75,13 @@ loadCommand.SetAction(async parseResult =>
     services.AddDataLoading(connectionString);
     services.AddHybridCache();
 
-    using var provider = services.BuildServiceProvider();
     using var activitySource = new ActivitySource("Test.Performance");
-    using var _ = activitySource.StartActivity("Load");
+    services.AddSingleton(activitySource);
+
+    using var provider = services.BuildServiceProvider();
     await using var scope = provider.CreateAsyncScope();
+
+    using var _ = activitySource.StartActivity("Load");
 
     await scope.ServiceProvider.GetRequiredService<DataLoader>().LoadAsync(source.FullName);
 });

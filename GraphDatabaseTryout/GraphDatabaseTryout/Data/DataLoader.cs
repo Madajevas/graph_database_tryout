@@ -4,16 +4,20 @@ using CsvHelper.Configuration;
 using GraphDatabaseTryout.Data.Models;
 using GraphDatabaseTryout.Data.Repositories;
 
+using System.Diagnostics;
 using System.Globalization;
 
 namespace GraphDatabaseTryout.Data
 {
-    internal class DataLoader(MoviesRepository moviesRepository, PersonsRepository personsRepository, JobsRepository jobsRepository)
+    internal class DataLoader(MoviesRepository moviesRepository, PersonsRepository personsRepository, JobsRepository jobsRepository, ActivitySource activitySource)
     {
         public async Task LoadAsync(string path)
         {
-            var movies = ParseFile<Movie, MovieMap>(Path.Combine(path, "title.basics.tsv"));
-            await moviesRepository.SaveAsync(movies);
+            using (activitySource.StartActivity("Load Movies"))
+            {
+                var movies = ParseFile<Movie, MovieMap>(Path.Combine(path, "title.basics.tsv"));
+                await moviesRepository.SaveAsync(movies);
+            }
             return;
 
             // var persons = ParseFile<Person, PersonMap>(Path.Combine(path, "name.basics.tsv"));
