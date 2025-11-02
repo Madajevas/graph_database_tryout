@@ -40,9 +40,9 @@ internal class MoviesRepository
 
         var batchBock = new BatchBlock<Movie>(200, new GroupingDataflowBlockOptions { BoundedCapacity = 1000 });
 
-        var insertMoviesBlock = new TransformBlock<IReadOnlyCollection<Movie>, IReadOnlyCollection<(string MovieId, Movie Movie)>>(GetInsertMovies, blockOptions);
+        var insertMoviesBlock = new TransformBlock<IReadOnlyCollection<Movie>, IReadOnlyCollection<(string MovieId, Movie Movie)>>(InsertMovies, blockOptions);
         batchBock.LinkTo(insertMoviesBlock, linkOptions);
-        var insertGenresBlock = new TransformBlock<IReadOnlyCollection<(string MovieId, Movie Movie)>, int>(GetInsertGenres, blockOptions);
+        var insertGenresBlock = new TransformBlock<IReadOnlyCollection<(string MovieId, Movie Movie)>, int>(InsertGenres, blockOptions);
         insertMoviesBlock.LinkTo(insertGenresBlock, linkOptions);
         var reportBlock = new ActionBlock<int>(moviesCounter.Add);
         insertGenresBlock.LinkTo(reportBlock, linkOptions);
@@ -55,7 +55,7 @@ internal class MoviesRepository
         await reportBlock.Completion;
     }
 
-    private async Task<int> GetInsertGenres(IReadOnlyCollection<(string MovieId, Movie Movie)> movies)
+    private async Task<int> InsertGenres(IReadOnlyCollection<(string MovieId, Movie Movie)> movies)
     {
         using var connection = provider.GetRequiredService<SqlConnection>();
         await connection.OpenAsync();
@@ -103,7 +103,7 @@ internal class MoviesRepository
         return movies.Count;
     }
 
-    private async Task<IReadOnlyCollection<(string MovieId, Movie Movie)>> GetInsertMovies(IReadOnlyCollection<Movie> movies)
+    private async Task<IReadOnlyCollection<(string MovieId, Movie Movie)>> InsertMovies(IReadOnlyCollection<Movie> movies)
     {
         using var connection = provider.GetRequiredService<SqlConnection>();
         await connection.OpenAsync();
@@ -138,8 +138,8 @@ internal class MoviesRepository
             var row = table.NewRow();
             row[nameof(Movie.Id)] = movie.Id;
             row[nameof(Movie.Name)] = movie.Name;
-            row[nameof(Movie.Year)] = movie.Year.HasValue ? movie.Year.Value : DBNull.Value;
-            row[nameof(Movie.Length)] = movie.Length.HasValue ? movie.Length.Value : DBNull.Value;
+            row[nameof(Movie.Year)] = movie.Year is uint year ? year : DBNull.Value;
+            row[nameof(Movie.Length)] = movie.Length is uint len ? len : DBNull.Value;
             table.Rows.Add(row);
         }
 

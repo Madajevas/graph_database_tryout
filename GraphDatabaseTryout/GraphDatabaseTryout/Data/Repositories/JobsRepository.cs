@@ -45,7 +45,7 @@ namespace GraphDatabaseTryout.Data.Repositories
                 await connection.OpenAsync();
                 using var transaction = connection.BeginTransaction();
 
-                var batch = connection.CreateBatch();
+                using var batch = connection.CreateBatch();
                 batch.Transaction = transaction;
                 foreach (var command in commands)
                 {
